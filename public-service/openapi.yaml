@@ -1,0 +1,27 @@
+openapi: 3.0.3
+info:
+  title: public-service
+  version: "1.0"
+paths:
+  /:
+    get:
+      summary: Root GET
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Root POST
+      responses:
+        "200":
+          description: OK
+  /test:
+    get:
+      summary: Test GET
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Test POST
+      responses:
+        "200":
+          description: OK

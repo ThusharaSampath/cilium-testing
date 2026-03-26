@@ -1,0 +1,12 @@
+schemaVersion: 1.2
+
+endpoints:
+  - name: project-service
+    displayName: Project Service
+    service:
+      basePath: /
+      port: 8080
+    type: REST
+    networkVisibilities:
+      - Project
+    schemaFilePath: openapi.yaml

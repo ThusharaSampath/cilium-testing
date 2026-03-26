@@ -1,0 +1,19 @@
+schemaVersion: 1.2
+
+endpoints:
+  - name: project-level-client
+    displayName: Project Level Client
+    service:
+      basePath: /
+      port: 8080
+    type: REST
+    networkVisibilities:
+      - Public
+    schemaFilePath: openapi.yaml
+
+dependencies:
+  connectionReferences:
+    # After creating the connection in Choreo, paste the generated snippet here.
+    # The connection name below must match what you set in Choreo.
+    - name: server-connection
+      resourceRef: <RESOURCE_REF_FROM_CHOREO>

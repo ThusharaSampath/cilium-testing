@@ -1,0 +1,12 @@
+schemaVersion: 1.2
+
+endpoints:
+  - name: proxy-service
+    displayName: Proxy Service
+    service:
+      basePath: /
+      port: 8080
+    type: REST
+    networkVisibilities:
+      - Public
+    schemaFilePath: openapi.yaml

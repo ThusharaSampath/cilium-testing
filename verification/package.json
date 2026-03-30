@@ -1,0 +1,21 @@
+{
+  "name": "verification",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "setup": "bash scripts/setup.sh",
+    "login": "npx playwright test --project=auth-setup --headed",
+    "create:all": "npx playwright test --project=create-components",
+    "create:one": "npx playwright test --project=create-components -g"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^25.5.0",
+    "dotenv": "^17.3.1",
+    "typescript": "^6.0.2"
+  }
+}

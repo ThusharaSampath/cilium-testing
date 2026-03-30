@@ -22,3 +22,10 @@ error-responder/error-responder
 .idea/
 *.swp
 *.swo
+
+# Verification automation
+verification/.env
+verification/auth/
+verification/screenshots/
+verification/test-results/
+verification/node_modules/

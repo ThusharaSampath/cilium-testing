@@ -1,0 +1,16 @@
+openapi: 3.0.3
+info:
+  title: proxy-service
+  version: "1.0"
+paths:
+  /:
+    get:
+      summary: Proxy GET
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Proxy POST
+      responses:
+        "200":
+          description: OK

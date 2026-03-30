@@ -1,0 +1,16 @@
+openapi: 3.0.3
+info:
+  title: error-responder
+  version: "1.0"
+paths:
+  /:
+    get:
+      summary: Returns 500 error
+      responses:
+        "500":
+          description: Internal Server Error
+    post:
+      summary: Returns 500 error
+      responses:
+        "500":
+          description: Internal Server Error

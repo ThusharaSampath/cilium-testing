@@ -1,0 +1,66 @@
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: request-drop-test-client
+spec:
+  selector:
+    matchLabels:
+      app: request-drop-test-client
+      client: request-drop-test
+  template:
+    metadata:
+      labels:
+        app: request-drop-test-client
+        client: request-drop-test
+    spec:
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          while true; do
+            HTTP_CODE=$(curl -o /dev/null -s -w "%{http_code}" -m 30 http://request-drop-test-server)
+            echo "HTTP_CODE: $HTTP_CODE TIME: $(date +%s)"
+            if [ "$HTTP_CODE" -ne 200 ]; then
+              exit 1
+            fi
+          done
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: request-drop-test-server
+spec:
+  selector:
+    matchLabels:
+      app: request-drop-test-server
+      server: request-drop-test
+  template:
+    metadata:
+      labels:
+        app: request-drop-test-server
+        server: request-drop-test
+      annotations:
+        policy.cilium.io/proxy-visibility: "<Egress/53/UDP/DNS>,<Ingress/80/TCP/HTTP>"
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: request-drop-test-server
+spec:
+  selector:
+    app: request-drop-test-server
+    server: request-drop-test
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP

@@ -1,0 +1,33 @@
+
+# Test Cases
+- [ ] Cross-node communication
+  - Apply https://github.com/isala404/toolbox/blob/main/k8s-yamls/cross-node-request-drop-test.yaml
+  - Make sure all the pods run without crashing for 5 minutes.
+  - At the start, it is expected to have a few restarts, but after 1-2 minutes, it should not have any.
+- [ ] HTTP retries
+   - Create a component that returns a 500 status code and logs every time there is a request with https://github.com/ThusharaSampath/cilium-testing/tree/main/error-responder.
+   - Configure an HTTP retry using endpoint configs
+   - Check if the component received retry requests by checking logs
+- [ ] Cilium Network Policy enforcement (https://github.com/ThusharaSampath/cilium-testing)
+  - [ ] Unable to connect to the metadata endpoint http://169.254.169.254
+  - [ ] Public services are reachable via the gateway
+  - [ ] Organization-level services are reachable via the internal gateway
+  - [ ] Project-level services are reachable via another component within the same project
+  - [ ] Webapps are reachable
+  - [ ] CoreDNS connectivity is working
+  - [ ] Service-to-service scale to zero is working with both services having scale to zero enabled, and the second service is only exposed on the project scope
+- [ ] Increased 403s returned from the gateway ([query](https://portal.azure.com#@da76d684-740f-4d94-8717-9d5fb21dd1f9/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2F520bc16b-6ff6-4d94-970e-1fa9c4708084%2Fresourcegroups%2Fchoreo-dev-log-analytics-rg%2Fproviders%2Fmicrosoft.operationalinsights%2Fworkspaces%2Fchoreo-log-crack-sole/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAA22OQUvEQAyF7%252F0VYU8zsCuC4q2nKlIU8aBnmXbiNquTlExGreyPd1ZZRPAdw%252FflvU7YAjHqrWybPeyEGF6IY%252FuKz5YxEbibMuC9xJ7fkE10aaBmD%252B8TKkJ39O9CQphChtU4iaJsRmHG0TYqxVBX%252FlsT%252FjX6S2iOb%252BagGZ92WdjVIVdsuvgTxTx3EhHaFs5PzyqMH4YcIczUR2jBJJsSb92%252FeqUeC0VfvSxqMCzwQAmvsXYHw3i4l5SC0ifCKIXN%252BQM0ELs%252F4BouJr%252F%252Baf0CE16cnjABAAA%253D/timespan/P7D))
+  - Sometimes we have noticed an elevated number of HTTP 403s during/after upgrades.
+  - This can be confirmed by checking the router log with the status code.
+  - This was due to some of the pods having deleted pod identities.
+- [ ] Increased "upstream not found" errors returned from the gateway ([query](https://portal.azure.com#@da76d684-740f-4d94-8717-9d5fb21dd1f9/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2F520bc16b-6ff6-4d94-970e-1fa9c4708084%2Fresourcegroups%2Fchoreo-dev-log-analytics-rg%2Fproviders%2Fmicrosoft.operationalinsights%2Fworkspaces%2Fchoreo-log-crack-sole/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAA22OwU7DMAyG730Kq6dU2jhy66lDqAJNO8C5ShuzZDR25ThA0R6eDDQhJHy0v%252B%252F33zGpDYTyyMfqDCcOBK%252BBXDvjiyaMAcxDHvHArqc3JGVZKyhzhnePgtBd%252Fb2NCN4mqCfPgrydmAgn3QpnRambb43p1%252Bh3UF1jFisJh1NiMqXIHamszY1gWjp2uNM5QdtCTTx4tLP6dchLUkEb6xKBH4rkwC6hd9CCcjkFOpp%252FQwv1nINripdYFMYVnkLEeyyNrKK77HOMVsInwsSZ1DQXaAxk%252FoAbuPXN5ufrFzmcnh9GAQAA/timespan/P7D))
+  - Sometimes we have noticed an elevated number of "upstream not found" errors during/after upgrades.
+  - This is because the gateway router was unable to connect to the CoreDNS to lookup the service IPs.
+- [ ] Hubble-based observability
+  - Check that both Hubble CLI-based and Prometheus-based observability are working.
+  - CLI - `hubble observe -t l7`
+  - Prometheus - `kubectl -n choreo-observability port-forward svc/prometheus-prometheus 9090:9090`
+  - Open 9090 on localhost and run `hubble_http_requests_total{}`
+  - Open the graph and see that at least one line is drawing.
+- [ ] Transparent encryption
+  - https://docs.cilium.io/en/v1.14/security/network/encryption-wireguard/#validate-the-setup

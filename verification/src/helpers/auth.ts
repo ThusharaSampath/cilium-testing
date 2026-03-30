@@ -14,7 +14,8 @@ export async function waitForManualLogin(page: Page): Promise<void> {
   console.log("The script will continue automatically after login.");
   console.log("========================================\n");
 
-  await page.waitForURL(`**/organizations/${config.orgHandle}/**`, {
+  // After login, Choreo redirects to the default org — not necessarily the configured one
+  await page.waitForURL("**/organizations/**", {
     timeout: 180_000, // 3 minutes for manual login
   });
 

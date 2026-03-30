@@ -1,93 +1,108 @@
-import { type Page, expect } from "@playwright/test";
+import { type Page } from "@playwright/test";
 import { type ComponentDefinition } from "../config/components.js";
 import { config } from "../config/env.js";
 
 /**
- * Creates a single component in the Choreo UI.
+ * Creates a single component in the Choreo UI via the public GitHub repo flow.
  *
- * NOTE: The selectors below are best-guess based on typical Choreo console patterns.
- * They will likely need adjustment after the first headed run.
- * Run `npx playwright codegen <choreo-url>` to discover actual selectors.
+ * Flow based on actual Choreo console screenshots:
+ * 1. Navigate to project → "Create a Service" page
+ * 2. Click "Use Public GitHub Repository"
+ * 3. Fill repo URL → Branch/Directory fields appear
+ * 4. Edit Component Directory to the service path
+ * 5. Fill Display Name (Name auto-populates)
+ * 6. Select Build Preset (Go)
+ * 7. Click "Create and Deploy"
  */
 export async function createComponent(
   page: Page,
   component: ComponentDefinition
 ): Promise<void> {
-  console.log(`Creating component: ${component.name}`);
+  console.log(`\nCreating component: ${component.name}`);
+  console.log(`  Directory: ${component.sourceDirectory}`);
+  console.log(`  Build preset: ${component.buildPreset}`);
 
-  // Step 1: Navigate to project and click create
+  // Step 1: Navigate to the "Create a Service" page
+  // The URL pattern from screenshots: .../create-list then select Service
   await page.goto(`${config.projectUrl}/home`);
   await page.waitForLoadState("networkidle");
 
-  // Step 2: Click "Create" button to start component creation
+  // Click "Create" button on the project home
   const createButton = page.getByRole("button", { name: /create/i }).first();
   await createButton.waitFor({ state: "visible", timeout: 30_000 });
   await createButton.click();
   await page.waitForLoadState("networkidle");
 
-  // Step 3: Select "Service" as the component type
-  // The Choreo UI typically shows cards or buttons for component types
-  const serviceOption = page
-    .getByRole("button", { name: /service/i })
-    .or(page.getByText("Service", { exact: true }))
-    .first();
-  await serviceOption.waitFor({ state: "visible", timeout: 15_000 });
-  await serviceOption.click();
-
-  // Step 4: Select the GitHub repository
-  // Look for the repo name in a dropdown or list
-  await page
-    .getByText(config.githubRepo, { exact: false })
-    .first()
-    .click({ timeout: 15_000 });
-
-  // Step 5: Select branch
-  // Might be auto-selected if there's only main, or need to pick from dropdown
-  const branchSelector = page.getByText(config.githubBranch, { exact: false });
-  if (await branchSelector.isVisible()) {
-    await branchSelector.first().click();
-  }
-
-  // Step 6: Enter or select the source directory
-  // This could be a text input or a directory browser
-  const directoryInput = page
-    .getByPlaceholder(/directory/i)
-    .or(page.getByLabel(/directory/i))
-    .or(page.getByLabel(/path/i))
-    .first();
-
-  if (await directoryInput.isVisible()) {
-    await directoryInput.fill(component.sourceDirectory);
-  } else {
-    // Try clicking on the directory in a tree view
-    const parts = component.sourceDirectory.split("/");
-    for (const part of parts) {
-      await page.getByText(part, { exact: true }).first().click();
-    }
-  }
-
-  // Step 7: Enter the component name
-  const nameInput = page
-    .getByLabel(/name/i)
-    .or(page.getByPlaceholder(/name/i))
-    .first();
-  await nameInput.waitFor({ state: "visible", timeout: 15_000 });
-  await nameInput.clear();
-  await nameInput.fill(component.name);
-
-  // Step 8: Click the final "Create" button
-  const submitButton = page
-    .getByRole("button", { name: /create/i })
-    .last();
-  await submitButton.click();
-
-  // Step 9: Wait for confirmation — URL should change or a success message appears
+  // Select "Service" component type
+  await page.getByText("Service", { exact: true }).first().click();
   await page.waitForLoadState("networkidle");
 
-  // Give the UI a moment to settle and show the component page
+  // Step 2: Click "Use Public GitHub Repository"
+  await page
+    .getByText("Use Public GitHub Repository")
+    .click({ timeout: 15_000 });
+  await page.waitForLoadState("networkidle");
+
+  // Step 3: Fill the Public Repository URL
+  const repoUrl = `https://github.com/${config.githubRepo}`;
+  const repoInput = page.getByPlaceholder("https://github.com/org/repo");
+  await repoInput.waitFor({ state: "visible", timeout: 15_000 });
+  await repoInput.fill(repoUrl);
+  // Press Enter or Tab to trigger the URL validation/fetch
+  await repoInput.press("Enter");
+
+  // Wait for the "Edit" button next to Component Directory to appear
+  // This indicates the repo URL was validated and branch/directory loaded
+  const editButton = page.locator('#page-scroll-container').getByText("Edit");
+  await editButton.waitFor({ state: "visible", timeout: 30_000 });
+
+  // Step 4: Edit Component Directory via the directory picker dialog
+  await editButton.click();
+
+  // Wait for the dialog to appear and scope all interactions to it
+  const dialog = page.getByRole("dialog");
+  await dialog.waitFor({ state: "visible", timeout: 10_000 });
+
+  // Search for the last segment of the directory path
+  // e.g., "server" for "service-to-service/project-level/server"
+  const searchTerm = component.sourceDirectory.split("/").pop()!;
+  const searchInput = dialog.getByPlaceholder("Search Directories");
+  await searchInput.waitFor({ state: "visible", timeout: 10_000 });
+  await searchInput.fill(searchTerm);
+
+  // Wait for search results to filter
+  await page.waitForTimeout(1000);
+
+  // Click the matching folder in the tree
+  // The tree shows the full path (e.g., "service-to-service/project-level/server")
+  // For top-level dirs it shows just the name (e.g., "proxy-service")
+  const folderItem = dialog.getByText(component.sourceDirectory, {
+    exact: true,
+  });
+  await folderItem.click({ timeout: 10_000 });
+
+  // Click "Continue" to confirm the directory selection
+  await dialog.getByRole("button", { name: "Continue" }).click();
+
+  // Wait for dialog to close and the page to update
+  await page.waitForTimeout(2000);
+  await page.waitForLoadState("networkidle");
+
+  // Step 5: Display Name and Name are auto-filled from the directory name
+
+  // Step 6: Select Build Preset (Go, Docker, etc.)
+  await page.getByText(component.buildPreset, { exact: true }).click();
+
+  // Step 7: Click "Create and Deploy"
+  await page
+    .getByRole("button", { name: "Create and Deploy" })
+    .click({ timeout: 15_000 });
+
+  // Wait for navigation away from the create page (indicates success)
+  await page.waitForLoadState("networkidle");
   await page.waitForTimeout(3000);
 
-  console.log(`Component created: ${component.name}`);
+  console.log(`  Component created successfully: ${component.name}`);
 
   if (component.note) {
     console.log(`  NOTE: ${component.note}`);

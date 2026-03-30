@@ -17,7 +17,7 @@ export default defineConfig({
 
   use: {
     baseURL: process.env.CHOREO_CONSOLE_URL,
-    storageState: authFile,
+    headless: false,
     screenshot: "only-on-failure",
     video: "retain-on-failure",
     trace: "retain-on-failure",
@@ -29,16 +29,14 @@ export default defineConfig({
     {
       name: "auth-setup",
       testMatch: "setup-auth.spec.ts",
-      use: {
-        storageState: undefined, // no existing auth for login
-        headless: false,
-      },
+      timeout: 180_000, // 3 minutes for manual SSO login
+      // No storageState — fresh browser for login
     },
     {
       name: "create-components",
       testMatch: "create-components.spec.ts",
       use: {
-        headless: true,
+        storageState: authFile,
       },
     },
   ],

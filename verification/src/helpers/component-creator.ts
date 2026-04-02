@@ -17,7 +17,7 @@ import { config } from "../config/env.js";
 export async function createComponent(
   page: Page,
   component: ComponentDefinition
-): Promise<void> {
+): Promise<string> {
   console.log(`\nCreating component: ${component.name}`);
   console.log(`  Directory: ${component.sourceDirectory}`);
   console.log(`  Build preset: ${component.buildPreset}`);
@@ -98,13 +98,31 @@ export async function createComponent(
     .getByRole("button", { name: "Create and Deploy" })
     .click({ timeout: 15_000 });
 
-  // Wait for navigation away from the create page (indicates success)
+  // Wait for the UI to auto-redirect to the newly created component's overview page.
+  // The component slug is auto-generated, so we must wait for the redirect
+  // and extract the URL rather than constructing it ourselves.
+  // Note: We wait for /overview specifically because the create page URL already
+  // contains /components/new/, so a generic /components/** match resolves immediately.
+  await page.waitForURL("**/components/*/overview", { timeout: 120_000 });
   await page.waitForLoadState("networkidle");
-  await page.waitForTimeout(3000);
+
+  // Extract the component base URL from the current page URL
+  // URL pattern: .../projects/{project}/components/{auto-generated-slug}/...
+  const currentUrl = page.url();
+  const componentsMatch = currentUrl.match(/(.*\/components\/[^/]+)/);
+  if (!componentsMatch) {
+    throw new Error(
+      `Failed to extract component URL after creation. Current URL: ${currentUrl}`
+    );
+  }
+  const componentUrl = componentsMatch[1];
 
   console.log(`  Component created successfully: ${component.name}`);
+  console.log(`  Component URL: ${componentUrl}`);
 
   if (component.note) {
     console.log(`  NOTE: ${component.note}`);
   }
+
+  return componentUrl;
 }

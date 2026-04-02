@@ -39,5 +39,12 @@ export default defineConfig({
         storageState: authFile,
       },
     },
+    {
+      name: "create-connections",
+      testMatch: "create-connections.spec.ts",
+      use: {
+        storageState: authFile,
+      },
+    },
   ],
 });

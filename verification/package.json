@@ -6,7 +6,8 @@
     "setup": "bash scripts/setup.sh",
     "login": "npx playwright test --project=auth-setup --headed",
     "create:all": "npx playwright test --project=create-components",
-    "create:one": "npx playwright test --project=create-components -g"
+    "create:one": "npx playwright test --project=create-components -g",
+    "create:connection": "npx playwright test --project=create-connections"
   },
   "keywords": [],
   "author": "",

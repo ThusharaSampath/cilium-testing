@@ -9,6 +9,24 @@ paths:
       responses:
         "200":
           description: Aggregated results from org, public, and project services
+  /test/org:
+    get:
+      summary: Test org-service connectivity
+      responses:
+        "200":
+          description: Result from org-service
+  /test/public:
+    get:
+      summary: Test public-service connectivity
+      responses:
+        "200":
+          description: Result from public-service
+  /test/project:
+    get:
+      summary: Test project-service connectivity
+      responses:
+        "200":
+          description: Result from project-service
   /health:
     get:
       summary: Health check

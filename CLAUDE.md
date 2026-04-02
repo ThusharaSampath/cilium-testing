@@ -15,6 +15,17 @@ Go services deployed as Choreo components via the public GitHub repo `ThusharaSa
 - `public-service/` — Publicly accessible service (network visibility: Public).
 - `proxy-service/` — Reverse proxy that forwards to a backend URL (defaults to metadata endpoint `169.254.169.254`). Used to test metadata endpoint blocking via Cilium network policies.
 - `service-to-service/project-level/server` and `client` — A pair that tests project-level service-to-service communication. The client calls the server's `/hello` endpoint via a Choreo connection.
+- `tester/` — Central test service that calls org, public, and project services. Requires the following env vars configured in Choreo:
+  - `ORG_SERVICE_URL` — Connection URL for org-service
+  - `PUBLIC_SERVICE_URL` — Connection URL for public-service
+  - `PROJECT_SERVICE_URL` — Connection URL for project-service
+
+  Endpoints:
+  - `GET /test` — Calls all three services and returns aggregated results
+  - `GET /test/org` — Calls org-service only
+  - `GET /test/public` — Calls public-service only
+  - `GET /test/project` — Calls project-service only
+  - `GET /health` — Health check
 
 ### Verification Automation (`verification/`)
 Two types of automation:
@@ -39,6 +50,7 @@ Defined in `verification/verification-steps.md`. Current automation status:
 | Cross-node communication | Yes | `scripts/cluster/cross-node-test.sh` |
 | Hubble observability (CLI + Prometheus) | Yes | `scripts/cluster/hubble-observability-test.sh` |
 | Transparent encryption (WireGuard) | Yes | `scripts/cluster/transparent-encryption-test.sh` |
+| CoreDNS connectivity | Yes | `scripts/cluster/coredns-test.sh` |
 | Component creation | Yes | Playwright (`npm run create:all`) |
 | HTTP retries | Not yet | Needs Choreo endpoint config + log check |
 | Cilium network policy enforcement | Not yet | Needs Choreo test console or curl from pods |
@@ -60,4 +72,5 @@ npm run create:all
 bash scripts/cluster/cross-node-test.sh
 bash scripts/cluster/hubble-observability-test.sh
 bash scripts/cluster/transparent-encryption-test.sh
+bash scripts/cluster/coredns-test.sh
 ```

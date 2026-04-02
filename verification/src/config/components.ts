@@ -1,3 +1,10 @@
+export interface ConnectionDefinition {
+  /** Name for the connection (e.g., "client-to-server") */
+  name: string;
+  /** Display name of the target service to select (e.g., "server") */
+  targetServiceName: string;
+}
+
 export interface ComponentDefinition {
   name: string;
   displayName: string;
@@ -5,6 +12,8 @@ export interface ComponentDefinition {
   networkVisibility: "Public" | "Organization" | "Project";
   buildPreset: "Go" | "Docker" | "Python" | "Java" | "NodeJS" | "Ballerina";
   note?: string;
+  /** Connections to create after the component is deployed */
+  connections?: ConnectionDefinition[];
 }
 
 export const components: ComponentDefinition[] = [
@@ -56,7 +65,12 @@ export const components: ComponentDefinition[] = [
     sourceDirectory: "service-to-service/project-level/client",
     networkVisibility: "Public",
     buildPreset: "Go",
-    note: "Requires manual server-connection configuration in Choreo after creation",
+    connections: [
+      {
+        name: "client-to-server-con",
+        targetServiceName: "server",
+      },
+    ],
   },
   {
     name: "tester",

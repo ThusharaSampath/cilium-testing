@@ -1,6 +1,7 @@
 import { test } from "@playwright/test";
 import { components } from "../config/components.js";
 import { createComponent } from "../helpers/component-creator.js";
+import { createConnection } from "../helpers/connection-creator.js";
 
 // If COMPONENT_NAME is set, only create that one component
 const targetName = process.env.COMPONENT_NAME;
@@ -17,6 +18,13 @@ if (targetName && targetComponents.length === 0) {
 
 for (const component of targetComponents) {
   test(`Create component: ${component.name}`, async ({ page }) => {
-    await createComponent(page, component);
+    const componentUrl = await createComponent(page, component);
+
+    // Create connections if defined for this component
+    if (component.connections) {
+      for (const connection of component.connections) {
+        await createConnection(page, componentUrl, connection);
+      }
+    }
   });
 }

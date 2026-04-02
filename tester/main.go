@@ -27,13 +27,15 @@ type testResponse struct {
 	Results []serviceResult `json:"results"`
 }
 
-var services = []struct {
+type serviceConfig struct {
 	name   string
 	envVar string
-}{
-	{"org-service", "ORG_SERVICE_URL"},
-	{"public-service", "PUBLIC_SERVICE_URL"},
-	{"project-service", "PROJECT_SERVICE_URL"},
+}
+
+var services = map[string]serviceConfig{
+	"org":     {name: "org-service", envVar: "ORG_SERVICE_URL"},
+	"public":  {name: "public-service", envVar: "PUBLIC_SERVICE_URL"},
+	"project": {name: "project-service", envVar: "PROJECT_SERVICE_URL"},
 }
 
 func callService(name, baseURL string) serviceResult {
@@ -52,35 +54,66 @@ func callService(name, baseURL string) serviceResult {
 	return serviceResult{Name: name, Status: resp.StatusCode, Response: json.RawMessage(body)}
 }
 
-func handleTest(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
-	}
+func logRequest(r *http.Request) {
 	logger.Printf("[%s] %s %s | RemoteAddr: %s",
 		time.Now().UTC().Format(time.RFC3339),
 		r.Method, r.URL.RequestURI(), r.RemoteAddr,
 	)
+}
 
-	type result struct {
+func handleSingle(svc serviceConfig) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		logRequest(r)
+
+		url := os.Getenv(svc.envVar)
+		var result serviceResult
+		if url == "" {
+			result = serviceResult{Name: svc.name, Error: fmt.Sprintf("env %s not set", svc.envVar)}
+		} else {
+			result = callService(svc.name, url)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(testResponse{
+			Service: serviceName,
+			Time:    time.Now().UTC().Format(time.RFC3339),
+			Results: []serviceResult{result},
+		})
+	}
+}
+
+func handleAll(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	logRequest(r)
+
+	type indexedResult struct {
 		index int
 		value serviceResult
 	}
-	ch := make(chan result, len(services))
 
-	for i, svc := range services {
-		go func(idx int, name, envVar string) {
-			url := os.Getenv(envVar)
+	keys := []string{"org", "public", "project"}
+	ch := make(chan indexedResult, len(keys))
+
+	for i, key := range keys {
+		go func(idx int, svc serviceConfig) {
+			url := os.Getenv(svc.envVar)
 			if url == "" {
-				ch <- result{idx, serviceResult{Name: name, Error: fmt.Sprintf("env %s not set", envVar)}}
+				ch <- indexedResult{idx, serviceResult{Name: svc.name, Error: fmt.Sprintf("env %s not set", svc.envVar)}}
 				return
 			}
-			ch <- result{idx, callService(name, url)}
-		}(i, svc.name, svc.envVar)
+			ch <- indexedResult{idx, callService(svc.name, url)}
+		}(i, services[key])
 	}
 
-	results := make([]serviceResult, len(services))
-	for range services {
+	results := make([]serviceResult, len(keys))
+	for range keys {
 		r := <-ch
 		results[r.index] = r.value
 	}
@@ -104,7 +137,8 @@ func main() {
 		port = "8080"
 	}
 
-	for _, svc := range services {
+	for _, key := range []string{"org", "public", "project"} {
+		svc := services[key]
 		url := os.Getenv(svc.envVar)
 		if url != "" {
 			logger.Printf("  %s = %s", svc.envVar, url)
@@ -113,8 +147,12 @@ func main() {
 		}
 	}
 
-	http.HandleFunc("/test", handleTest)
+	http.HandleFunc("/test", handleAll)
+	http.HandleFunc("/test/org", handleSingle(services["org"]))
+	http.HandleFunc("/test/public", handleSingle(services["public"]))
+	http.HandleFunc("/test/project", handleSingle(services["project"]))
 	http.HandleFunc("/health", handleHealth)
+
 	logger.Printf("%s listening on :%s", serviceName, port)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		logger.Fatalf("server error: %v", err)

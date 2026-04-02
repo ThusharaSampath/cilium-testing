@@ -13,10 +13,9 @@ import (
 var logger = log.New(os.Stdout, "", 0)
 
 // serverURL reads the service URL injected by Choreo via the connection.
-// Connection name in component.yaml: server-connection
-// Choreo injects: CHOREO_SERVER_CONNECTION_SERVICEURL
+// Choreo injects: CHOREO_CLIENT_TO_SERVER_SERVICEURL
 func serverURL() string {
-	if url := os.Getenv("CHOREO_SERVER_CONNECTION_SERVICEURL"); url != "" {
+	if url := os.Getenv("CHOREO_CLIENT_TO_SERVER_SERVICEURL"); url != "" {
 		return url
 	}
 	// local fallback for development
@@ -40,6 +39,9 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to build request: %v", err), http.StatusInternalServerError)
 		return
+	}
+	if apiKey := os.Getenv("CHOREO_CLIENT_TO_SERVER_CHOREOAPIKEY"); apiKey != "" {
+		req.Header.Add("Choreo-API-Key", apiKey)
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}

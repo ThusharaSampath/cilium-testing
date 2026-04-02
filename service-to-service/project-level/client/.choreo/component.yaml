@@ -12,8 +12,6 @@ endpoints:
     schemaFilePath: openapi.yaml
 
 dependencies:
-  connectionReferences:
-    # After creating the connection in Choreo, paste the generated snippet here.
-    # The connection name below must match what you set in Choreo.
-    - name: server-connection
-      resourceRef: <RESOURCE_REF_FROM_CHOREO>
+    connectionReferences:
+    - name: client-to-server
+      resourceRef: service:/cilium-verification/server/v1/5c69c/PROJECT

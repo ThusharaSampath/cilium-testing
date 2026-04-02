@@ -10,7 +10,29 @@ export interface ComponentDefinition {
   displayName: string;
   sourceDirectory: string;
   networkVisibility: "Public" | "Organization" | "Project";
-  buildPreset: "Go" | "Docker" | "Python" | "Java" | "NodeJS" | "Ballerina";
+  buildPreset:
+    | "Go"
+    | "Docker"
+    | "Python"
+    | "Java"
+    | "NodeJS"
+    | "Ballerina"
+    | "React"
+    | "Angular"
+    | ".NET"
+    | "Vue.js"
+    | "PHP"
+    | "Ruby"
+    | "Spring Boot"
+    | "Static Website";
+  /** Component type in Choreo. Defaults to "Service" */
+  componentType?: "Service" | "Web Application";
+  /** Build command for web apps (e.g., "npm run build") */
+  buildCommand?: string;
+  /** Build output path for web apps (e.g., "/build") */
+  buildPath?: string;
+  /** Node version for web apps (e.g., "18.x") */
+  nodeVersion?: string;
   note?: string;
   /** Connections to create after the component is deployed */
   connections?: ConnectionDefinition[];
@@ -79,5 +101,13 @@ export const components: ComponentDefinition[] = [
     networkVisibility: "Project",
     buildPreset: "Go",
     note: "Requires manual configuration of ORG_SERVICE_URL, PUBLIC_SERVICE_URL, PROJECT_SERVICE_URL env vars in Choreo after creation",
+  },
+  {
+    name: "react-single-page-app",
+    displayName: "React Single Page App",
+    sourceDirectory: "react-single-page-app",
+    networkVisibility: "Public",
+    buildPreset: "React",
+    componentType: "Web Application",
   },
 ];

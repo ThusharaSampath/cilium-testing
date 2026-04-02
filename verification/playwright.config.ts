@@ -8,11 +8,11 @@ const authFile = path.resolve(__dirname, "auth", "storage-state.json");
 
 export default defineConfig({
   testDir: "./src/tests",
-  timeout: 120_000,
+  timeout: 240_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: 1,
-  retries: 1,
+  retries: parseInt(process.env.RETRIES ?? "0"),
   reporter: "list",
 
   use: {

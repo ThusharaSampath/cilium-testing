@@ -14,6 +14,8 @@ if [ -z "$1" ]; then
   echo "  proxy-service"
   echo "  project-level-server"
   echo "  project-level-client"
+  echo "  tester"
+  echo "  react-single-page-app"
   exit 1
 fi
 

@@ -33,8 +33,9 @@ export async function createComponent(
   await createButton.click();
   await page.waitForLoadState("networkidle");
 
-  // Select "Service" component type
-  await page.getByText("Service", { exact: true }).first().click();
+  // Select component type (Service or Web Application)
+  const componentType = component.componentType ?? "Service";
+  await page.getByText(componentType, { exact: true }).first().click();
   await page.waitForLoadState("networkidle");
 
   // Step 2: Click "Use Public GitHub Repository"
@@ -90,8 +91,23 @@ export async function createComponent(
 
   // Step 5: Display Name and Name are auto-filled from the directory name
 
-  // Step 6: Select Build Preset (Go, Docker, etc.)
+  // Step 6: Select Build Preset (Go, Docker, React, etc.)
   await page.getByText(component.buildPreset, { exact: true }).click();
+
+  // Step 6b: Fill web app-specific fields (Build Command, Build Path, Node Version)
+  if (component.buildCommand) {
+    const buildCommandInput = page.getByPlaceholder("Eg: npm run build");
+    await buildCommandInput.fill(component.buildCommand);
+  }
+  if (component.buildPath) {
+    const buildPathInput = page.getByPlaceholder("Eg: /build");
+    await buildPathInput.fill(component.buildPath);
+  }
+  if (component.nodeVersion) {
+    const nodeVersionInput = page.locator('input[value*=".x"]');
+    await nodeVersionInput.clear();
+    await nodeVersionInput.fill(component.nodeVersion);
+  }
 
   // Step 7: Click "Create and Deploy"
   await page

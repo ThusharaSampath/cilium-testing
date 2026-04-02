@@ -11,7 +11,7 @@
 - [ ] Cilium Network Policy enforcement (https://github.com/ThusharaSampath/cilium-testing)
   - [x] Unable to connect to the metadata endpoint http://169.254.169.254
   - [x] Public services are reachable via the gateway
-  - [ ] Organization-level services are reachable via the internal gateway
+  - [ ] Organization-level services are reachable via the internal gateway (This was not worked in DEV CDP)
   - [x] Project-level services are reachable via another component within the same project
   - [ ] Webapps are reachable
   - [x] CoreDNS connectivity is working

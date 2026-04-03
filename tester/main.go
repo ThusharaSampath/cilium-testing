@@ -36,6 +36,7 @@ var services = map[string]serviceConfig{
 	"org":     {name: "org-service", envVar: "ORG_SERVICE_URL"},
 	"public":  {name: "public-service", envVar: "PUBLIC_SERVICE_URL"},
 	"project": {name: "project-service", envVar: "PROJECT_SERVICE_URL"},
+	"webapp":  {name: "webapp", envVar: "WEBAPP_URL"},
 }
 
 func callService(name, baseURL string) serviceResult {
@@ -54,6 +55,33 @@ func callService(name, baseURL string) serviceResult {
 	return serviceResult{Name: name, Status: resp.StatusCode, Response: json.RawMessage(body)}
 }
 
+func callWebApp(name, baseURL string) serviceResult {
+	resp, err := http.Get(baseURL)
+	if err != nil {
+		return serviceResult{Name: name, Error: fmt.Sprintf("request failed: %v", err)}
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return serviceResult{Name: name, Status: resp.StatusCode, Error: fmt.Sprintf("read body failed: %v", err)}
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+	result := map[string]string{
+		"content_type": contentType,
+		"body_length":  fmt.Sprintf("%d", len(body)),
+	}
+	if resp.StatusCode == http.StatusOK {
+		result["status"] = "reachable"
+	} else {
+		result["status"] = "unhealthy"
+	}
+
+	raw, _ := json.Marshal(result)
+	return serviceResult{Name: name, Status: resp.StatusCode, Response: json.RawMessage(raw)}
+}
+
 func logRequest(r *http.Request) {
 	logger.Printf("[%s] %s %s | RemoteAddr: %s",
 		time.Now().UTC().Format(time.RFC3339),
@@ -61,7 +89,7 @@ func logRequest(r *http.Request) {
 	)
 }
 
-func handleSingle(svc serviceConfig) http.HandlerFunc {
+func handleSingle(svc serviceConfig, isWebApp bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -73,6 +101,8 @@ func handleSingle(svc serviceConfig) http.HandlerFunc {
 		var result serviceResult
 		if url == "" {
 			result = serviceResult{Name: svc.name, Error: fmt.Sprintf("env %s not set", svc.envVar)}
+		} else if isWebApp {
+			result = callWebApp(svc.name, url)
 		} else {
 			result = callService(svc.name, url)
 		}
@@ -98,18 +128,22 @@ func handleAll(w http.ResponseWriter, r *http.Request) {
 		value serviceResult
 	}
 
-	keys := []string{"org", "public", "project"}
+	keys := []string{"org", "public", "project", "webapp"}
 	ch := make(chan indexedResult, len(keys))
 
 	for i, key := range keys {
-		go func(idx int, svc serviceConfig) {
+		go func(idx int, k string, svc serviceConfig) {
 			url := os.Getenv(svc.envVar)
 			if url == "" {
 				ch <- indexedResult{idx, serviceResult{Name: svc.name, Error: fmt.Sprintf("env %s not set", svc.envVar)}}
 				return
 			}
-			ch <- indexedResult{idx, callService(svc.name, url)}
-		}(i, services[key])
+			if k == "webapp" {
+				ch <- indexedResult{idx, callWebApp(svc.name, url)}
+			} else {
+				ch <- indexedResult{idx, callService(svc.name, url)}
+			}
+		}(i, key, services[key])
 	}
 
 	results := make([]serviceResult, len(keys))
@@ -137,7 +171,7 @@ func main() {
 		port = "8080"
 	}
 
-	for _, key := range []string{"org", "public", "project"} {
+	for _, key := range []string{"org", "public", "project", "webapp"} {
 		svc := services[key]
 		url := os.Getenv(svc.envVar)
 		if url != "" {
@@ -148,9 +182,10 @@ func main() {
 	}
 
 	http.HandleFunc("/test", handleAll)
-	http.HandleFunc("/test/org", handleSingle(services["org"]))
-	http.HandleFunc("/test/public", handleSingle(services["public"]))
-	http.HandleFunc("/test/project", handleSingle(services["project"]))
+	http.HandleFunc("/test/org", handleSingle(services["org"], false))
+	http.HandleFunc("/test/public", handleSingle(services["public"], false))
+	http.HandleFunc("/test/project", handleSingle(services["project"], false))
+	http.HandleFunc("/test/webapp", handleSingle(services["webapp"], true))
 	http.HandleFunc("/health", handleHealth)
 
 	logger.Printf("%s listening on :%s", serviceName, port)

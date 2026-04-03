@@ -100,7 +100,7 @@ export const components: ComponentDefinition[] = [
     sourceDirectory: "tester",
     networkVisibility: "Project",
     buildPreset: "Go",
-    note: "Requires manual configuration of ORG_SERVICE_URL, PUBLIC_SERVICE_URL, PROJECT_SERVICE_URL env vars in Choreo after creation",
+    note: "Requires manual configuration of ORG_SERVICE_URL, PUBLIC_SERVICE_URL, PROJECT_SERVICE_URL, WEBAPP_URL env vars in Choreo after creation",
   },
   {
     name: "react-single-page-app",

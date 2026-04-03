@@ -27,6 +27,12 @@ paths:
       responses:
         "200":
           description: Result from project-service
+  /test/webapp:
+    get:
+      summary: Test webapp reachability
+      responses:
+        "200":
+          description: Result from webapp health check
   /health:
     get:
       summary: Health check

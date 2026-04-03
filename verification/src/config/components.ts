@@ -109,5 +109,8 @@ export const components: ComponentDefinition[] = [
     networkVisibility: "Public",
     buildPreset: "React",
     componentType: "Web Application",
+    buildCommand: "npm run build",
+    buildPath: "/build",
+    nodeVersion: "18",
   },
 ];

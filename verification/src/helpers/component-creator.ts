@@ -96,16 +96,15 @@ export async function createComponent(
 
   // Step 6b: Fill web app-specific fields (Build Command, Build Path, Node Version)
   if (component.buildCommand) {
-    const buildCommandInput = page.getByPlaceholder("Eg: npm run build");
+    const buildCommandInput = page.getByPlaceholder(/npm run build/i);
     await buildCommandInput.fill(component.buildCommand);
   }
   if (component.buildPath) {
-    const buildPathInput = page.getByPlaceholder("Eg: /build");
+    const buildPathInput = page.getByPlaceholder(/\/build/);
     await buildPathInput.fill(component.buildPath);
   }
   if (component.nodeVersion) {
-    const nodeVersionInput = page.locator('input[value*=".x"]');
-    await nodeVersionInput.clear();
+    const nodeVersionInput = page.getByPlaceholder(/18/);
     await nodeVersionInput.fill(component.nodeVersion);
   }
 

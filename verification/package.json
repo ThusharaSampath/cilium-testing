@@ -7,7 +7,8 @@
     "login": "npx playwright test --project=auth-setup --headed",
     "create:all": "npx playwright test --project=create-components",
     "create:one": "npx playwright test --project=create-components -g",
-    "create:connection": "npx playwright test --project=create-connections"
+    "create:connection": "npx playwright test --project=create-connections",
+    "test:console": "npx playwright test --project=test-console"
   },
   "keywords": [],
   "author": "",

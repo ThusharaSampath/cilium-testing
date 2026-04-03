@@ -46,5 +46,12 @@ export default defineConfig({
         storageState: authFile,
       },
     },
+    {
+      name: "test-console",
+      testMatch: "test-console.spec.ts",
+      use: {
+        storageState: authFile,
+      },
+    },
   ],
 });

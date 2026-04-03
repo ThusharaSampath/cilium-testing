@@ -29,3 +29,5 @@ verification/auth/
 verification/screenshots/
 verification/test-results/
 verification/node_modules/
+
+kubeconfig

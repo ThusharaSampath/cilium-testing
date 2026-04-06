@@ -10,3 +10,30 @@ endpoints:
     networkVisibilities:
       - Public
     schemaFilePath: openapi.yaml
+
+configurations:
+  env:
+    - name: ORG_SERVICE_URL
+      valueFrom:
+        configForm:
+          displayName: Org Service URL
+          required: false
+          type: string
+    - name: PUBLIC_SERVICE_URL
+      valueFrom:
+        configForm:
+          displayName: Public Service URL
+          required: false
+          type: string
+    - name: PROJECT_SERVICE_URL
+      valueFrom:
+        configForm:
+          displayName: Project Service URL
+          required: false
+          type: string
+    - name: WEBAPP_URL
+      valueFrom:
+        configForm:
+          displayName: Webapp URL
+          required: false
+          type: string

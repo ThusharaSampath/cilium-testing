@@ -8,7 +8,8 @@
     "create:all": "npx playwright test --project=create-components",
     "create:one": "npx playwright test --project=create-components -g",
     "create:connection": "npx playwright test --project=create-connections",
-    "test:console": "npx playwright test --project=test-console"
+    "test:console": "npx playwright test --project=test-console",
+    "collect:urls": "npx playwright test --project=collect-urls"
   },
   "keywords": [],
   "author": "",

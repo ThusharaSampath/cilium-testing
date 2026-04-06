@@ -53,5 +53,12 @@ export default defineConfig({
         storageState: authFile,
       },
     },
+    {
+      name: "collect-urls",
+      testMatch: "collect-urls.spec.ts",
+      use: {
+        storageState: authFile,
+      },
+    },
   ],
 });

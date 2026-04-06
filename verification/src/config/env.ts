@@ -9,6 +9,7 @@ const required = [
   "CHOREO_PROJECT_NAME",
   "GITHUB_REPO_NAME",
   "GITHUB_BRANCH",
+  "GOOGLE_ACCOUNT_NAME",
 ] as const;
 
 for (const key of required) {
@@ -25,6 +26,7 @@ export const config = {
   projectName: process.env.CHOREO_PROJECT_NAME!,
   githubRepo: process.env.GITHUB_REPO_NAME!,
   githubBranch: process.env.GITHUB_BRANCH!,
+  googleAccountName: process.env.GOOGLE_ACCOUNT_NAME!,
 
   get projectUrl() {
     return `${this.consoleUrl}/organizations/${this.orgHandle}/projects/${this.projectName}`;

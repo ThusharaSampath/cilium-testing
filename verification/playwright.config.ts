@@ -60,5 +60,12 @@ export default defineConfig({
         storageState: authFile,
       },
     },
+    {
+      name: "update-tester-config",
+      testMatch: "update-tester-config.spec.ts",
+      use: {
+        storageState: authFile,
+      },
+    },
   ],
 });

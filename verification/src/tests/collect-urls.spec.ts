@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { config } from "../config/env.js";
+import { handleGoogleReloginIfNeeded } from "../helpers/google-relogin.js";
+import fs from "fs";
+import path from "path";
 
 interface UrlTarget {
   component: string;
@@ -38,6 +41,7 @@ test("collect endpoint URLs from all components", async ({ page }) => {
     const overviewUrl = `${config.projectUrl}/components/${target.component}/overview`;
     await page.goto(overviewUrl);
     await page.waitForLoadState("networkidle");
+    await handleGoogleReloginIfNeeded(page);
 
     let url: string;
 
@@ -84,6 +88,11 @@ test("collect endpoint URLs from all components", async ({ page }) => {
   console.log("\n=== Collected URLs ===");
   console.log(JSON.stringify(collectedUrls, null, 2));
   console.log("=== End URLs ===");
+
+  // Save to file for use by other scripts
+  const outputPath = path.resolve(__dirname, "../../collected-urls.json");
+  fs.writeFileSync(outputPath, JSON.stringify(collectedUrls, null, 2));
+  console.log(`Saved to ${outputPath}`);
 
   // Validate all URLs were collected
   for (const target of urlTargets) {

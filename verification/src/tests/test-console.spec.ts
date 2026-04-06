@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { config } from "../config/env.js";
+import { handleGoogleReloginIfNeeded } from "../helpers/google-relogin.js";
 
 test("invoke /test endpoint from tester component test console", async ({
   page,
@@ -8,6 +9,7 @@ test("invoke /test endpoint from tester component test console", async ({
   const testConsoleUrl = `${config.projectUrl}/components/tester/test/console`;
   await page.goto(testConsoleUrl);
   await page.waitForLoadState("networkidle");
+  await handleGoogleReloginIfNeeded(page);
 
   // Click on the /test API resource row to expand it
   const expandButton = page.locator('button[aria-label="get ​/test"]');

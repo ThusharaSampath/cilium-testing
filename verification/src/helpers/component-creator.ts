@@ -1,6 +1,7 @@
 import { type Page } from "@playwright/test";
 import { type ComponentDefinition } from "../config/components.js";
 import { config } from "../config/env.js";
+import { handleGoogleReloginIfNeeded } from "./google-relogin.js";
 
 /**
  * Creates a single component in the Choreo UI via the public GitHub repo flow.
@@ -26,6 +27,7 @@ export async function createComponent(
   // The URL pattern from screenshots: .../create-list then select Service
   await page.goto(`${config.projectUrl}/home`);
   await page.waitForLoadState("networkidle");
+  await handleGoogleReloginIfNeeded(page);
 
   // Click "Create" button on the project home
   const createButton = page.getByRole("button", { name: /create/i }).first();

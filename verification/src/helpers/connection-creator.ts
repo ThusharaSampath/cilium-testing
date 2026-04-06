@@ -1,5 +1,6 @@
 import { type Page } from "@playwright/test";
 import { type ConnectionDefinition } from "../config/components.js";
+import { handleGoogleReloginIfNeeded } from "./google-relogin.js";
 
 /**
  * Creates a connection for a component in the Choreo UI.
@@ -25,6 +26,7 @@ export async function createConnection(
   // Step 1: Navigate to the component's Connections page
   await page.goto(`${componentUrl}/connections`);
   await page.waitForLoadState("networkidle");
+  await handleGoogleReloginIfNeeded(page);
 
   // Step 2: Click "Service" connection type card
   const serviceCard = page.locator('[data-cyid="service-card-button"]');

@@ -29,5 +29,6 @@ verification/auth/
 verification/screenshots/
 verification/test-results/
 verification/node_modules/
+verification/collected-urls.json
 
 kubeconfig

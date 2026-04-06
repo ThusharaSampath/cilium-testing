@@ -1,9 +1,11 @@
 import { type Page } from "@playwright/test";
 import { config } from "../config/env.js";
+import { handleGoogleReloginIfNeeded } from "./google-relogin.js";
 
 export async function navigateToProject(page: Page): Promise<void> {
   await page.goto(`${config.projectUrl}/home`);
   await page.waitForLoadState("networkidle");
+  await handleGoogleReloginIfNeeded(page);
 }
 
 export async function navigateToComponentCreation(page: Page): Promise<void> {

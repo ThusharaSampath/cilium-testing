@@ -28,6 +28,9 @@ export const config = {
   githubBranch: process.env.GITHUB_BRANCH!,
   googleAccountName: process.env.GOOGLE_ACCOUNT_NAME!,
 
+  /** Max time in ms to poll for component builds before timing out */
+  buildWaitMs: parseInt(process.env.BUILD_WAIT_MINUTES ?? "20") * 60 * 1000,
+
   get projectUrl() {
     return `${this.consoleUrl}/organizations/${this.orgHandle}/projects/${this.projectName}`;
   },

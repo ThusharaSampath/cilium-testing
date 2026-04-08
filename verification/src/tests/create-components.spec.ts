@@ -18,12 +18,12 @@ if (targetName && targetComponents.length === 0) {
 
 for (const component of targetComponents) {
   test(`Create component: ${component.name}`, async ({ page }) => {
-    const componentUrl = await createComponent(page, component);
+    const result = await createComponent(page, component);
 
     // Create connections if defined for this component
     if (component.connections) {
       for (const connection of component.connections) {
-        await createConnection(page, componentUrl, connection);
+        await createConnection(page, result.componentUrl, connection);
       }
     }
   });

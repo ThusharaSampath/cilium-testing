@@ -2,6 +2,15 @@ import { type Page } from "@playwright/test";
 import { type ComponentDefinition } from "../config/components.js";
 import { config } from "../config/env.js";
 import { handleGoogleReloginIfNeeded } from "./google-relogin.js";
+import { captureDeploymentDetails } from "./build-poller.js";
+
+export interface ComponentCreateResult {
+  componentUrl: string;
+  componentId: string;
+  versionId: string;
+  token: string;
+  apiUrl: string;
+}
 
 /**
  * Creates a single component in the Choreo UI via the public GitHub repo flow.
@@ -18,7 +27,7 @@ import { handleGoogleReloginIfNeeded } from "./google-relogin.js";
 export async function createComponent(
   page: Page,
   component: ComponentDefinition
-): Promise<string> {
+): Promise<ComponentCreateResult> {
   console.log(`\nCreating component: ${component.name}`);
   console.log(`  Directory: ${component.sourceDirectory}`);
   console.log(`  Build preset: ${component.buildPreset}`);
@@ -110,7 +119,15 @@ export async function createComponent(
     await nodeVersionInput.fill(component.nodeVersion);
   }
 
-  // Step 7: Click "Create and Deploy"
+  // Step 7: Set up GraphQL interception BEFORE clicking "Create and Deploy"
+  // so we can capture the deploymentStatusByVersion call on the overview page
+  const buildDetailsPromise = captureDeploymentDetails(
+    page,
+    component.name,
+    "" // componentUrl not known yet, will be set after redirect
+  );
+
+  // Click "Create and Deploy"
   await page
     .getByRole("button", { name: "Create and Deploy" })
     .click({ timeout: 15_000 });
@@ -134,6 +151,9 @@ export async function createComponent(
   }
   const componentUrl = componentsMatch[1];
 
+  // Wait for the GraphQL interception to capture build details
+  const buildDetails = await buildDetailsPromise;
+
   console.log(`  Component created successfully: ${component.name}`);
   console.log(`  Component URL: ${componentUrl}`);
 
@@ -141,5 +161,11 @@ export async function createComponent(
     console.log(`  NOTE: ${component.note}`);
   }
 
-  return componentUrl;
+  return {
+    componentUrl,
+    componentId: buildDetails.componentId,
+    versionId: buildDetails.versionId,
+    token: buildDetails.token,
+    apiUrl: buildDetails.apiUrl,
+  };
 }

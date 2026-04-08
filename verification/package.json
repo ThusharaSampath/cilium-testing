@@ -10,7 +10,10 @@
     "create:connection": "npx playwright test --project=create-connections",
     "test:console": "npx playwright test --project=test-console",
     "collect:urls": "npx playwright test --project=collect-urls",
-    "update:config": "npx playwright test --project=update-tester-config"
+    "update:config": "npx playwright test --project=update-tester-config",
+    "e2e:tester": "npx playwright test --project=e2e-tester",
+    "e2e:s2s": "npx playwright test --project=e2e-s2s",
+    "full-test": "npx playwright test --project=full-test"
   },
   "keywords": [],
   "author": "",

@@ -1,0 +1,173 @@
+apiVersion: v1
+data:
+  agent-not-ready-taint-key: node.cilium.io/agent-not-ready
+  arping-refresh-period: 30s
+  auto-direct-node-routes: "false"
+  bpf-lb-acceleration: disabled
+  bpf-lb-external-clusterip: "false"
+  bpf-lb-map-max: "65536"
+  bpf-lb-sock: "false"
+  bpf-map-dynamic-size-ratio: "0.0025"
+  bpf-policy-map-max: "16384"
+  bpf-root: /sys/fs/bpf
+  cgroup-root: /run/cilium/cgroupv2
+  cilium-endpoint-gc-interval: 5m0s
+  cluster-id: "0"
+  cluster-name: default
+  cluster-pool-ipv4-cidr: 10.42.0.0/16
+  cluster-pool-ipv4-mask-size: "24"
+  cni-exclusive: "true"
+  cni-log-file: /var/run/cilium/cilium-cni.log
+  controller-group-metrics: write-cni-file sync-host-ips sync-lb-maps-with-k8s-services
+  custom-cni-conf: "false"
+  debug: "false"
+  dnsproxy-enable-transparent-mode: "true"
+  dnsproxy-socket-linger-timeout: "10"
+  egress-gateway-reconciliation-trigger-interval: 1s
+  enable-auto-protect-node-port-range: "true"
+  enable-bandwidth-manager: "true"
+  enable-bbr: "false"
+  enable-bgp-control-plane: "false"
+  enable-bpf-clock-probe: "false"
+  enable-endpoint-health-checking: "true"
+  enable-envoy-config: "true"
+  enable-external-ips: "false"
+  enable-health-check-loadbalancer-ip: "false"
+  enable-health-check-nodeport: "true"
+  enable-health-checking: "true"
+  enable-host-port: "false"
+  enable-hubble: "true"
+  enable-hubble-open-metrics: "true"
+  enable-ipv4: "true"
+  enable-ipv4-big-tcp: "false"
+  enable-ipv4-masquerade: "true"
+  enable-ipv6: "false"
+  enable-ipv6-big-tcp: "false"
+  enable-ipv6-masquerade: "true"
+  enable-k8s-networkpolicy: "true"
+  enable-k8s-terminating-endpoint: "true"
+  enable-l2-neigh-discovery: "true"
+  enable-l7-proxy: "true"
+  enable-local-redirect-policy: "false"
+  enable-masquerade-to-route-source: "false"
+  enable-metrics: "true"
+  enable-node-port: "false"
+  enable-policy: default
+  enable-remote-node-identity: "true"
+  enable-sctp: "false"
+  enable-svc-source-range-check: "true"
+  enable-vtep: "false"
+  enable-well-known-identities: "false"
+  enable-wireguard: "true"
+  enable-xt-socket-fallback: "true"
+  envoy-secrets-namespace: cilium-secrets
+  external-envoy-proxy: "true"
+  http-normalize-path: "false"
+  http-retry-count: "0"
+  hubble-disable-tls: "false"
+  hubble-event-buffer-capacity: "65535"
+  hubble-export-allowlist: '{"event_type":[{"type":129}]}'
+  hubble-export-denylist: '{"source_pod":["kube-system/"]} {"destination_pod":["kube-system/"]}'
+  hubble-export-fieldmask: ""
+  hubble-export-file-max-backups: "5"
+  hubble-export-file-max-size-mb: "10"
+  hubble-export-file-path: /var/log/hubble/events.log
+  hubble-listen-address: :4244
+  hubble-metrics: httpV2:destinationContext=pod;sourceContext=pod;http_requests_total=status;http_request_duration_seconds=status
+  hubble-metrics-server: :9965
+  hubble-socket-path: /var/run/cilium/hubble.sock
+  hubble-tls-cert-file: /var/lib/cilium/tls/hubble/server.crt
+  hubble-tls-client-ca-files: /var/lib/cilium/tls/hubble/client-ca.crt
+  hubble-tls-key-file: /var/lib/cilium/tls/hubble/server.key
+  identity-allocation-mode: crd
+  identity-gc-interval: 15m0s
+  identity-heartbeat-timeout: 30m0s
+  install-no-conntrack-iptables-rules: "false"
+  ipam: cluster-pool
+  ipam-cilium-node-update-rate: 15s
+  k8s-client-burst: "10"
+  k8s-client-qps: "5"
+  kube-proxy-replacement: "false"
+  kube-proxy-replacement-healthz-bind-address: ""
+  max-connected-clusters: "255"
+  mesh-auth-enabled: "true"
+  mesh-auth-gc-interval: 5m0s
+  mesh-auth-queue-size: "1024"
+  mesh-auth-rotated-identities-queue-size: "1024"
+  monitor-aggregation: medium
+  monitor-aggregation-flags: all
+  monitor-aggregation-interval: 5s
+  node-port-bind-protection: "true"
+  nodes-gc-interval: 5m0s
+  operator-api-serve-addr: 127.0.0.1:9234
+  operator-prometheus-serve-addr: :9963
+  preallocate-bpf-maps: "false"
+  procfs: /host/proc
+  prometheus-serve-addr: :9962
+  proxy-connect-timeout: "2"
+  proxy-idle-timeout-seconds: "60"
+  proxy-max-connection-duration-seconds: "0"
+  proxy-max-requests-per-connection: "0"
+  proxy-xff-num-trusted-hops-egress: "0"
+  proxy-xff-num-trusted-hops-ingress: "0"
+  remove-cilium-node-taints: "true"
+  routing-mode: tunnel
+  service-no-backend-response: reject
+  set-cilium-is-up-condition: "true"
+  set-cilium-node-taints: "true"
+  sidecar-istio-proxy-image: cilium/istio_proxy
+  skip-cnp-status-startup-clean: "false"
+  synchronize-k8s-nodes: "true"
+  tofqdns-dns-reject-response-code: refused
+  tofqdns-enable-dns-compression: "true"
+  tofqdns-endpoint-max-ip-per-hostname: "50"
+  tofqdns-idle-connection-grace-period: 0s
+  tofqdns-max-deferred-connection-deletes: "10000"
+  tofqdns-proxy-response-max-delay: 100ms
+  unmanaged-pod-watcher-interval: "15"
+  vtep-cidr: ""
+  vtep-endpoint: ""
+  vtep-mac: ""
+  vtep-mask: ""
+  wireguard-persistent-keepalive: 0s
+  write-cni-conf-when-ready: /host/etc/cni/net.d/05-cilium.conflist
+kind: ConfigMap
+metadata:
+  annotations:
+    checkov.io/skip1: CKV_K8S_16=Risk accepted for cilium DaemonSet as not a considerable
+      threat
+    checkov.io/skip2: CKV_K8S_19=Risk accepted for multiple Cilium workloads as it
+      cannot be fixed
+    checkov.io/skip3: CKV_K8S_20=Risk accepted for cilium DaemonSet as not a considerable
+      threat
+    checkov.io/skip4: CKV_K8S_22=Risk accepted for multiple Cilium workloads as it
+      cannot be fixed
+    checkov.io/skip5: CKV_K8S_23=Risk accepted for multiple Cilium workloads as it
+      cannot be fully fixed
+    checkov.io/skip6: CKV_K8S_25=Risk accepted for multiple Cilium workloads as it
+      cannot be fixed
+    checkov.io/skip7: CKV_K8S_37=Risk accepted for cilium DaemonSet as it cannot be
+      fixed
+    checkov.io/skip8: CKV_K8S_38=Risk accepted for multiple Cilium workloads as it
+      is not an issue
+    checkov.io/skip9: CKV_K8S_39=Risk accepted for multiple Cilium workloads as it
+      cannot be fixed
+    checkov.io/skip10: CKV_K8S_40=Risk accepted for multiple Cilium workloads as it
+      cannot be fixed
+    checkov.io/skip11: CKV_K8S_33=Kubernetes dashboard is deployed not used for cilium
+    checkov.io/skip12: CKV_K8S_26=Risk accepted for cilium DaemonSet as it cannot
+      be fixed
+    checkov.io/skip13: CKV2_K8S_5=Risk accepted for cilium enovy as it cannot be fixed
+    checkov.io/skip14: CKV_K8S_AZURE_WSO2_2=LinkerD is not needed for cilium
+    checkov.io/skip999: CKV2_K8S_6=This is covered by CiliumNetworkPolicy
+    kapp.k14s.io/disable-default-label-scoping-rules: ""
+    kapp.k14s.io/disable-original: ""
+    kapp.k14s.io/identity: v1;kube-system//ConfigMap/cilium-config;v1
+  creationTimestamp: "2026-03-16T18:17:01Z"
+  labels:
+    kapp.k14s.io/app: "1773666249404681014"
+    kapp.k14s.io/association: v1.973a5ac0a53f0a0cd955549600a52e50
+  name: cilium-config
+  namespace: kube-system
+  resourceVersion: "10579423"
+  uid: 2bde7d2b-8e7a-4577-ba64-a7c75a4b01d8

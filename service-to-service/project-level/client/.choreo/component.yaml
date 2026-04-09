@@ -14,4 +14,4 @@ endpoints:
 dependencies:
     connectionReferences:
     - name: client-to-server-con
-      resourceRef: service:/byoi-config-map/everart-server/1.0.0/5c69c/PUBLIC
+      resourceRef: service:/thushara/server/v1/5c69c/PROJECT

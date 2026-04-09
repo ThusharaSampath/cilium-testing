@@ -13,5 +13,5 @@ endpoints:
 
 dependencies:
     connectionReferences:
-    - name: client-to-server-con
+    - name: client-to-server
       resourceRef: service:/thushara/server/v1/5c69c/PROJECT

@@ -13,7 +13,9 @@ This repository contains tools and services for verifying Cilium compatibility o
 | `proxy-service/` | Go reverse proxy (defaults to metadata endpoint `169.254.169.254`) |
 | `service-to-service/` | Client + Server pair for project-level service-to-service communication |
 | `cross-node-request-drop-test.yaml` | K8s DaemonSet manifest for cross-node request reliability testing |
-| `verification/` | Playwright automation for creating components in the Choreo console |
+| `tester/` | Central test service that calls org, public, project services and webapp |
+| `react-single-page-app/` | React webapp for reachability testing |
+| `verification/` | Playwright automation + cluster scripts for end-to-end verification |
 
 ## Prerequisites
 
@@ -58,38 +60,48 @@ npm run login
 
 Opens a headed Chromium browser. Complete the Google SSO login manually. Once you land on the Choreo dashboard, the script saves your session to `auth/storage-state.json` so subsequent runs skip login. Re-run this if your session expires.
 
-### 2. Create all components
+### 2. E2E Flows (recommended)
 
 ```bash
+# Create tester components (org, public, project, webapp, tester)
+# Prints next steps after creation
+npm run e2e:tester
+
+# Create service-to-service components (server + client with connection)
+# Prints manual steps after creation
+npm run e2e:s2s
+
+# Run full verification (tester + s2s client test consoles with combined report)
+npm run full-test
+```
+
+### 3. Individual Steps
+
+```bash
+# Create all components
 npm run create:all
+
+# Collect endpoint URLs from component overview pages
+npm run collect:urls
+
+# Update tester env config and redeploy
+npm run update:config
+
+# Invoke tester /test endpoint via test console
+npm run test:console
 ```
-
-Creates all 7 test components in your Choreo project sequentially. Runs headless by default. Choreo will auto-build and deploy each component after creation.
-
-### 3. Create a single component
-
-```bash
-bash scripts/create-one.sh <component-name>
-```
-
-Creates one specific component. Available names:
-
-- `error-responder`
-- `org-service`
-- `project-service`
-- `public-service`
-- `proxy-service`
-- `project-level-server`
-- `project-level-client`
 
 ### Scripts Reference
 
 | Script | Description |
 |---|---|
-| `scripts/setup.sh` | Installs npm dependencies, downloads Chromium, creates `.env` from template |
-| `scripts/login.sh` | Opens a browser for Google SSO login, saves auth state for reuse |
-| `scripts/create-all.sh` | Creates all 7 Choreo components (checks for auth state first) |
-| `scripts/create-one.sh` | Creates a single component by name (checks for auth state first) |
+| `npm run e2e:tester` | E2E: Create tester flow components, prints next steps |
+| `npm run e2e:s2s` | E2E: Create s2s components + connection, prints manual steps |
+| `npm run full-test` | Run tester + s2s client test consoles with combined pass/fail report |
+| `npm run create:all` | Creates all test components |
+| `npm run collect:urls` | Extracts endpoint URLs from deployed components |
+| `npm run update:config` | Updates tester env vars and triggers redeploy |
+| `npm run test:console` | Invokes tester /test endpoint via Choreo test console |
 
 ## Notes
 

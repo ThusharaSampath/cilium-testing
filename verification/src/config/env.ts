@@ -6,6 +6,7 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 const required = [
   "CHOREO_CONSOLE_URL",
   "CHOREO_ORG_HANDLE",
+  "CHOREO_PROJECT_ID",
   "CHOREO_PROJECT_NAME",
   "GITHUB_REPO_NAME",
   "GITHUB_BRANCH",
@@ -21,8 +22,9 @@ for (const key of required) {
 }
 
 export const config = {
-  consoleUrl: process.env.CHOREO_CONSOLE_URL!,
+  consoleUrl: process.env.CHOREO_CONSOLE_URL!.replace(/\/+$/, ""),
   orgHandle: process.env.CHOREO_ORG_HANDLE!,
+  projectId: process.env.CHOREO_PROJECT_ID!,
   projectName: process.env.CHOREO_PROJECT_NAME!,
   githubRepo: process.env.GITHUB_REPO_NAME!,
   githubBranch: process.env.GITHUB_BRANCH!,
@@ -33,5 +35,16 @@ export const config = {
 
   get projectUrl() {
     return `${this.consoleUrl}/organizations/${this.orgHandle}/projects/${this.projectName}`;
+  },
+
+  /** Choreo API base URL derived from console URL */
+  get apiUrl() {
+    // console.choreo.dev -> apis.choreo.dev
+    // consolev2.preview-dv.choreo.dev -> apis.preview-dv.choreo.dev
+    return this.consoleUrl.replace(/consolev?2?/, "apis");
+  },
+
+  get graphqlUrl() {
+    return `${this.apiUrl}/projects/1.0.0/graphql`;
   },
 };

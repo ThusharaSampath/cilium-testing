@@ -168,6 +168,8 @@ All cluster scripts automatically target the correct cluster.
 | `os-prometheus-operator-crb-backup-20260408-1015.yaml` | Backup of original `prometheus-operator` ClusterRoleBinding before fix attempt. |
 | `dev-cilium-config.yaml` | Reference copy of the DEV cluster's `cilium-config` ConfigMap for comparison. |
 | `os-cilium-config.yaml` | Reference copy of the OS cluster's `cilium-config` ConfigMap for comparison. |
+| `os-allow-world-except-az-metadata-backup-20260410.yaml` | Backup of original `allow-world-except-az-metadata` CCNP before patching. Used `egress` allow-except pattern which was ineffective due to `choreo-default-policies` allowing `0.0.0.0/0`. |
+| `os-allow-world-except-az-metadata-patched-20260410.yaml` | Patched `allow-world-except-az-metadata` CCNP using `egressDeny` with `toCIDR: 169.254.169.254/32` (matching DEV cluster's `deny-az-metadata` pattern). Helm-managed — may be reconciled by Flux. |
 
 ```bash
 # Connect to OS cluster

@@ -6,9 +6,6 @@ dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 const authFile = path.resolve(__dirname, "auth", "storage-state.json");
 
-const buildWaitMs =
-  parseInt(process.env.BUILD_WAIT_MINUTES ?? "20") * 60 * 1000;
-
 export default defineConfig({
   testDir: "./src/tests",
   timeout: 240_000,
@@ -73,7 +70,6 @@ export default defineConfig({
     {
       name: "e2e-tester",
       testMatch: "e2e-tester.spec.ts",
-      timeout: buildWaitMs * 2 + 10 * 60 * 1000, // 2 wait periods + 10 min buffer
       use: {
         storageState: authFile,
       },
@@ -81,7 +77,6 @@ export default defineConfig({
     {
       name: "e2e-s2s",
       testMatch: "e2e-s2s.spec.ts",
-      timeout: buildWaitMs + 10 * 60 * 1000, // 1 wait period + 10 min buffer
       use: {
         storageState: authFile,
       },

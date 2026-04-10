@@ -38,8 +38,15 @@ export async function createComponent(
   await page.waitForLoadState("networkidle");
   await handleGoogleReloginIfNeeded(page);
 
+  // Dismiss Copilot popup if it appears (it can block the Create button)
+  const copilotClose = page.locator('button[aria-label="Close"]');
+  if (await copilotClose.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    await copilotClose.click();
+    await page.waitForTimeout(500);
+  }
+
   // Click "Create" button on the project home
-  const createButton = page.getByRole("button", { name: /create/i }).first();
+  const createButton = page.locator('[data-cyid="create-new-component-button"]');
   await createButton.waitFor({ state: "visible", timeout: 30_000 });
   await createButton.click();
   await page.waitForLoadState("networkidle");

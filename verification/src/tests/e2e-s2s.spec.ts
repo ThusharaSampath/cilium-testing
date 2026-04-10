@@ -1,13 +1,8 @@
 import { test } from "@playwright/test";
 import { components } from "../config/components.js";
-import { config } from "../config/env.js";
 import { createComponent } from "../helpers/component-creator.js";
 import { createConnection } from "../helpers/connection-creator.js";
-import {
-  CapturedBuildDetails,
-  ComponentBuildInfo,
-  pollBuildStatus,
-} from "../helpers/build-poller.js";
+import { fetchExistingComponents } from "../helpers/component-fetcher.js";
 
 const s2sComponents = ["project-level-server", "project-level-client"];
 
@@ -15,26 +10,20 @@ const targetComponents = components.filter((c) =>
   s2sComponents.includes(c.name)
 );
 
-let buildDetails: CapturedBuildDetails;
-
 test.describe.serial("E2E Service-to-Service Flow", () => {
-  test("Step 1: Create server and client components", async ({ page }) => {
-    const componentInfos: ComponentBuildInfo[] = [];
-    let token = "";
-    let apiUrl = "";
+  test("Step 1: Create server and client components (skips existing)", async ({ page }) => {
+    // Fetch existing components to avoid re-creating them
+    const existing = await fetchExistingComponents(page);
+    const existingNames = new Set(existing.map((c) => c.handler));
 
     for (const component of targetComponents) {
+      if (existingNames.has(component.name)) {
+        console.log(`Skipping ${component.name} — already exists`);
+        continue;
+      }
+
       console.log(`Creating component: ${component.name}`);
       const result = await createComponent(page, component);
-
-      token = result.token;
-      apiUrl = result.apiUrl;
-      componentInfos.push({
-        name: component.name,
-        componentId: result.componentId,
-        versionId: result.versionId,
-        componentUrl: result.componentUrl,
-      });
 
       if (component.connections) {
         for (const connection of component.connections) {
@@ -42,34 +31,29 @@ test.describe.serial("E2E Service-to-Service Flow", () => {
         }
       }
     }
-
-    buildDetails = { token, apiUrl, components: componentInfos };
   });
 
-  test("Step 2: Wait for builds", async () => {
-    console.log("Polling build status for all components...");
-    await pollBuildStatus(buildDetails, 30_000, config.buildWaitMs);
-  });
-
-  test("Step 3: Manual steps required", async () => {
+  test("Step 2: Manual steps required", async () => {
     console.log("\n╔══════════════════════════════════════════════════════════╗");
     console.log("║       S2S SETUP COMPLETE - MANUAL STEPS REQUIRED        ║");
     console.log("╠══════════════════════════════════════════════════════════╣");
     console.log("║                                                          ║");
-    console.log("║  1. Go to Choreo console → project-level-client          ║");
+    console.log("║  1. Wait for all component builds to succeed in Choreo   ║");
+    console.log("║                                                          ║");
+    console.log("║  2. Go to Choreo console → project-level-client          ║");
     console.log("║     → Connections → copy the connection resourceRef      ║");
     console.log("║                                                          ║");
-    console.log("║  2. Update the client's component.yaml:                  ║");
+    console.log("║  3. Update the client's component.yaml:                  ║");
     console.log("║     service-to-service/project-level/client/             ║");
     console.log("║       .choreo/component.yaml                             ║");
     console.log("║     Update the resourceRef under connectionReferences    ║");
     console.log("║                                                          ║");
-    console.log("║  3. Commit and push:                                     ║");
+    console.log("║  4. Commit and push:                                     ║");
     console.log("║     git add . && git commit -m 'update s2s ref' && push  ║");
     console.log("║                                                          ║");
-    console.log("║  4. Rebuild the client component in Choreo               ║");
+    console.log("║  5. Rebuild the client component in Choreo               ║");
     console.log("║                                                          ║");
-    console.log("║  5. Once deployed, run the full test:                    ║");
+    console.log("║  6. Once deployed, run the full test:                    ║");
     console.log("║     npm run full-test                                    ║");
     console.log("║                                                          ║");
     console.log("╚══════════════════════════════════════════════════════════╝\n");

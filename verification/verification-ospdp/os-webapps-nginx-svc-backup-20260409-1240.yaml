@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    meta.helm.sh/release-name: choreo-pdp
+    meta.helm.sh/release-namespace: flux-system
+  creationTimestamp: "2026-04-02T20:32:56Z"
+  finalizers:
+  - service.kubernetes.io/load-balancer-cleanup
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: choreo-pdp
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/version: 1.12.1
+    helm.sh/chart: ingress-nginx-4.12.1
+    helm.toolkit.fluxcd.io/name: choreo-pdp
+    helm.toolkit.fluxcd.io/namespace: flux-system
+  name: ingress-nginx-controller
+  namespace: choreo-webapps
+  resourceVersion: "96451"
+  uid: fa89d3ef-bb75-44bb-9c11-ec09947ce477
+spec:
+  allocateLoadBalancerNodePorts: true
+  clusterIP: 172.30.56.242
+  clusterIPs:
+  - 172.30.56.242
+  externalTrafficPolicy: Cluster
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - appProtocol: http
+    name: http
+    nodePort: 31480
+    port: 80
+    protocol: TCP
+    targetPort: http
+  - appProtocol: https
+    name: https
+    nodePort: 30188
+    port: 443
+    protocol: TCP
+    targetPort: https
+  selector:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: choreo-pdp
+    app.kubernetes.io/name: ingress-nginx
+  sessionAffinity: None
+  type: LoadBalancer
+status:
+  loadBalancer:
+    ingress:
+    - hostname: afa89d3efbb7544bb9c11ec09947ce47-414808749.us-east-1.elb.amazonaws.com

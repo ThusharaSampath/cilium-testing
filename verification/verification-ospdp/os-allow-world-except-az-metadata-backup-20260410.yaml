@@ -1,0 +1,30 @@
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  annotations:
+    meta.helm.sh/release-name: choreo-pdp
+    meta.helm.sh/release-namespace: flux-system
+  creationTimestamp: "2026-04-02T20:32:57Z"
+  generation: 1
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    helm.toolkit.fluxcd.io/name: choreo-pdp
+    helm.toolkit.fluxcd.io/namespace: flux-system
+  name: allow-world-except-az-metadata
+  resourceVersion: "96017"
+  uid: a18f33a0-7d78-43bb-aa66-87bf3b0bed66
+spec:
+  egress:
+  - toCIDRSet:
+    - cidr: 0.0.0.0/0
+      except:
+      - 169.254.169.254/32
+  endpointSelector:
+    matchLabels:
+      user_app: "true"
+status:
+  conditions:
+  - lastTransitionTime: "2026-04-02T20:32:57Z"
+    message: Policy validation succeeded
+    status: "True"
+    type: Valid

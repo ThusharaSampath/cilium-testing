@@ -46,12 +46,12 @@ export async function createConnection(
   await searchInput.fill(connection.targetServiceName);
   await page.waitForTimeout(2000);
 
-  // Click the first resource card in the search results
-  const firstCard = page
-    .getByRole("button", { name: /API: REST/ })
-    .first();
-  await firstCard.waitFor({ state: "visible", timeout: 15_000 });
-  await firstCard.click();
+  // Click the resource card that has the exact service name in its h4
+  const targetCard = page
+    .locator(".MuiCardContent-root")
+    .filter({ has: page.locator("h4", { hasText: new RegExp(`^${connection.targetServiceName}$`) }) });
+  await targetCard.first().waitFor({ state: "visible", timeout: 15_000 });
+  await targetCard.first().click();
   await page.waitForLoadState("networkidle");
 
   // Step 4: Fill in the connection name

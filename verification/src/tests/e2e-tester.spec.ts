@@ -1,13 +1,8 @@
 import { test } from "@playwright/test";
 import { components } from "../config/components.js";
-import { config } from "../config/env.js";
 import { createComponent } from "../helpers/component-creator.js";
 import { createConnection } from "../helpers/connection-creator.js";
-import {
-  CapturedBuildDetails,
-  ComponentBuildInfo,
-  pollBuildStatus,
-} from "../helpers/build-poller.js";
+import { fetchExistingComponents } from "../helpers/component-fetcher.js";
 
 const testerComponents = [
   "org-service",
@@ -21,26 +16,20 @@ const targetComponents = components.filter((c) =>
   testerComponents.includes(c.name)
 );
 
-let buildDetails: CapturedBuildDetails;
-
 test.describe.serial("E2E Tester Flow", () => {
-  test("Step 1: Create components", async ({ page }) => {
-    const componentInfos: ComponentBuildInfo[] = [];
-    let token = "";
-    let apiUrl = "";
+  test("Step 1: Create components (skips existing)", async ({ page }) => {
+    // Fetch existing components to avoid re-creating them
+    const existing = await fetchExistingComponents(page);
+    const existingNames = new Set(existing.map((c) => c.handler));
 
     for (const component of targetComponents) {
+      if (existingNames.has(component.name)) {
+        console.log(`Skipping ${component.name} — already exists`);
+        continue;
+      }
+
       console.log(`Creating component: ${component.name}`);
       const result = await createComponent(page, component);
-
-      token = result.token;
-      apiUrl = result.apiUrl;
-      componentInfos.push({
-        name: component.name,
-        componentId: result.componentId,
-        versionId: result.versionId,
-        componentUrl: result.componentUrl,
-      });
 
       if (component.connections) {
         for (const connection of component.connections) {
@@ -48,27 +37,22 @@ test.describe.serial("E2E Tester Flow", () => {
         }
       }
     }
-
-    buildDetails = { token, apiUrl, components: componentInfos };
   });
 
-  test("Step 2: Wait for builds", async () => {
-    console.log("Polling build status for all components...");
-    await pollBuildStatus(buildDetails, 30_000, config.buildWaitMs);
-  });
-
-  test("Step 3: Next steps", async () => {
+  test("Step 2: Next steps", async () => {
     console.log("\n╔══════════════════════════════════════════════════════════╗");
     console.log("║     TESTER SETUP COMPLETE - RUN THESE NEXT              ║");
     console.log("╠══════════════════════════════════════════════════════════╣");
     console.log("║                                                          ║");
-    console.log("║  1. Collect endpoint URLs:                               ║");
+    console.log("║  1. Wait for all component builds to succeed in Choreo   ║");
+    console.log("║                                                          ║");
+    console.log("║  2. Collect endpoint URLs:                               ║");
     console.log("║     npm run collect:urls                                 ║");
     console.log("║                                                          ║");
-    console.log("║  2. Update tester env config and redeploy:               ║");
+    console.log("║  3. Update tester env config and redeploy:               ║");
     console.log("║     npm run update:config                                ║");
     console.log("║                                                          ║");
-    console.log("║  3. Wait for tester to redeploy, then run full test:     ║");
+    console.log("║  4. Wait for tester to redeploy, then run full test:     ║");
     console.log("║     npm run full-test                                    ║");
     console.log("║                                                          ║");
     console.log("╚══════════════════════════════════════════════════════════╝\n");

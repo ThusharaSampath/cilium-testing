@@ -62,17 +62,58 @@ GITHUB_BRANCH=main
 
 ## Running Tests
 
-### Phase 1: Create Choreo Components (Playwright)
+### Phase 1: Login and Create Components
 
 ```bash
 # Step 1: Login (one-time, opens browser for manual Google SSO)
 npm run login
+```
 
-# Step 2: Create all 7 test components
+### Phase 2: E2E Flows (recommended)
+
+Two E2E flows automate component creation and guide you through the remaining steps:
+
+**Tester Flow** — creates 5 components, then prints next steps:
+```bash
+npm run e2e:tester
+# After builds succeed in Choreo, follow the printed instructions:
+#   1. npm run collect:urls
+#   2. npm run update:config
+#   3. npm run full-test
+```
+
+**Service-to-Service Flow** — creates server + client with connection, then prints manual steps:
+```bash
+npm run e2e:s2s
+# After builds succeed in Choreo, follow the printed instructions:
+#   1. Copy connection resourceRef from Choreo console
+#   2. Update client's .choreo/component.yaml
+#   3. Commit, push, rebuild
+#   4. npm run full-test
+```
+
+**Full Test** — runs both tester and s2s client test consoles with combined report:
+```bash
+npm run full-test
+```
+
+### Phase 3: Individual Steps (alternative to E2E)
+
+```bash
+# Create all test components
 npm run create:all
 
 # Or create one specific component
 bash scripts/create-one.sh error-responder
+
+# Collect endpoint URLs from deployed components
+npm run collect:urls
+
+# Update tester env vars and redeploy
+npm run update:config
+
+# Run tester test console only
+npm run test:console
 ```
 
 Available components:
@@ -84,10 +125,12 @@ Available components:
 | `project-service` | `project-service` | Project-level visibility |
 | `public-service` | `public-service` | Public visibility |
 | `proxy-service` | `proxy-service` | Proxies to metadata endpoint |
+| `tester` | `tester` | Central test service calling all others |
+| `react-single-page-app` | `react-single-page-app` | React webapp for reachability testing |
 | `project-level-server` | `service-to-service/project-level/server` | Server for service-to-service test |
 | `project-level-client` | `service-to-service/project-level/client` | Client for service-to-service test |
 
-### Phase 2: Cluster Verification Scripts
+### Phase 4: Cluster Verification Scripts
 
 All scripts require the SSH tunnel to be running (`sh ssh-tunnel-dev-dp.sh <username>`).
 
@@ -128,11 +171,24 @@ verification/
       components.ts         # 7 component definitions
     helpers/
       auth.ts               # Google SSO login helper
+      google-relogin.ts     # Auto re-login on session expiry
       navigation.ts         # Choreo page navigation
       component-creator.ts  # Core UI automation logic
+      connection-creator.ts # Service connection creation
+      url-collector.ts      # Extracts endpoint URLs from component pages
+      tester-config-updater.ts  # Updates tester env vars via deploy wizard
+      test-console-runner.ts    # Executes test console and returns response
+      build-poller.ts       # GraphQL build status polling (available for future use)
     tests/
-      setup-auth.spec.ts    # Login test (headed, manual SSO)
-      create-components.spec.ts  # Component creation tests
+      setup-auth.spec.ts        # Login test (headed, manual SSO)
+      create-components.spec.ts # Component creation tests
+      create-connections.spec.ts # Connection creation tests
+      collect-urls.spec.ts      # Collect endpoint URLs
+      update-tester-config.spec.ts # Update tester env config
+      test-console.spec.ts      # Invoke tester test console
+      e2e-tester.spec.ts        # E2E: create tester components + next steps
+      e2e-s2s.spec.ts           # E2E: create s2s components + manual steps
+      full-test.spec.ts         # Full test: tester + s2s with combined report
   scripts/
     setup.sh                # Install dependencies
     login.sh                # Browser login

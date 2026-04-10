@@ -21,12 +21,25 @@ trap cleanup EXIT
 
 verify_cluster
 
-# --- Check CoreDNS pods health ---
-log "Checking CoreDNS pod status..."
-COREDNS_PODS=$(kubectl get pods -n kube-system -l k8s-app=kube-dns --no-headers 2>/dev/null)
+# --- Check DNS pods health ---
+# OpenShift uses openshift-dns namespace with different labels; AKS uses kube-system with k8s-app=kube-dns
+if [ "$CLUSTER" = "OS" ]; then
+  DNS_NAMESPACE="openshift-dns"
+  DNS_LABEL="dns.operator.openshift.io/daemonset-dns=default"
+  DNS_SERVICE_DOMAIN="dns-default.openshift-dns.svc.cluster.local"
+  DNS_LABEL_NAME="OpenShift DNS"
+else
+  DNS_NAMESPACE="kube-system"
+  DNS_LABEL="k8s-app=kube-dns"
+  DNS_SERVICE_DOMAIN="kube-dns.kube-system.svc.cluster.local"
+  DNS_LABEL_NAME="CoreDNS"
+fi
+
+log "Checking $DNS_LABEL_NAME pod status in $DNS_NAMESPACE..."
+COREDNS_PODS=$(kubectl get pods -n "$DNS_NAMESPACE" -l "$DNS_LABEL" --no-headers 2>/dev/null)
 
 if [ -z "$COREDNS_PODS" ]; then
-  fail "No CoreDNS pods found in kube-system namespace."
+  fail "No $DNS_LABEL_NAME pods found in $DNS_NAMESPACE namespace."
   exit 1
 fi
 
@@ -44,10 +57,10 @@ while read -r line; do
 done <<< "$COREDNS_PODS"
 
 if [ "$ALL_RUNNING" = false ]; then
-  fail "Not all CoreDNS pods are healthy."
+  fail "Not all $DNS_LABEL_NAME pods are healthy."
   exit 1
 fi
-log "All CoreDNS pods are healthy."
+log "All $DNS_LABEL_NAME pods are healthy."
 echo ""
 
 # --- Spin up debug pod ---
@@ -82,8 +95,8 @@ run_dns_test() {
 run_dns_test "Kubernetes API service" \
   "kubernetes.default.svc.cluster.local"
 
-run_dns_test "CoreDNS service" \
-  "kube-dns.kube-system.svc.cluster.local"
+run_dns_test "$DNS_LABEL_NAME service" \
+  "$DNS_SERVICE_DOMAIN"
 
 run_dns_test "External domain resolution" \
   "google.com"
@@ -97,10 +110,10 @@ fi
 # --- Results ---
 echo ""
 if [ "$PASS" -eq "$TOTAL" ]; then
-  log "=== PASSED: CoreDNS connectivity test ($PASS/$TOTAL) ==="
+  log "=== PASSED: $DNS_LABEL_NAME connectivity test ($PASS/$TOTAL) ==="
   exit 0
 else
   FAILED=$((TOTAL - PASS))
-  fail "=== FAILED: CoreDNS connectivity test ($PASS/$TOTAL passed, $FAILED failed) ==="
+  fail "=== FAILED: $DNS_LABEL_NAME connectivity test ($PASS/$TOTAL passed, $FAILED failed) ==="
   exit 1
 fi

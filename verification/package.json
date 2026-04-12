@@ -13,7 +13,11 @@
     "update:config": "npx playwright test --project=update-tester-config",
     "e2e:tester": "npx playwright test --project=e2e-tester",
     "e2e:s2s": "npx playwright test --project=e2e-s2s",
-    "full-test": "npx playwright test --project=full-test"
+    "poll:builds": "npx playwright test --project=poll-builds",
+    "full-test": "npx playwright test --project=full-test",
+    "track:tester": "bash scripts/track-tester.sh",
+    "track:s2s": "bash scripts/track-s2s.sh",
+    "verify": "bash scripts/verify.sh"
   },
   "keywords": [],
   "author": "",

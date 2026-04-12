@@ -82,6 +82,14 @@ export default defineConfig({
       },
     },
     {
+      name: "poll-builds",
+      testMatch: "poll-builds.spec.ts",
+      timeout: 25 * 60 * 1000, // 25 minutes (longer than BUILD_WAIT_MINUTES default)
+      use: {
+        storageState: authFile,
+      },
+    },
+    {
       name: "full-test",
       testMatch: "full-test.spec.ts",
       use: {

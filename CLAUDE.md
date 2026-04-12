@@ -6,6 +6,12 @@ This repository automates the verification of Cilium CNI compatibility on WSO2 C
 
 ## What This Repo Contains
 
+Important
+- to access OS cluster: use  `KUBECONFIG=kubeconfig && kubectl cmd`
+- to access DEV cluster: use  `HTTPS_PROXY=http://localhost:3129 && kubectl cmd`
+- If you create/update/delete any artifcat you need to first backup original artifact (goodname-time.yaml), update the readme to explain the file in short, backup new/updated artifcat.
+- If you do a task that can be automated and it worth doing a automation ask me to create a script for it 
+
 ### Test Service Source Code
 Go services deployed as Choreo components via the public GitHub repo `ThusharaSampath/cilium-testing`. Each service has a `.choreo/component.yaml` and `openapi.yaml` for Choreo auto-detection.
 

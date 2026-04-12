@@ -23,18 +23,18 @@
   - [x] Public services are reachable via the gateway
   - [ ] Organization-level services are reachable via the internal gateway (This was not worked in DEV CDP)
   - [x] Project-level services are reachable via another component within the same project
-  - [ ] Webapps are reachable (also tested via tester `/test/webapp` endpoint)
-    - **BLOCKED — external traffic not reaching webapps nginx controller (2026-04-09)**
-    - Webapp pod is healthy: nginx running, returns HTTP 200 when hit by pod IP (`curl http://10.128.15.252:8080/`)
-    - Ingress (`choreo-webapps-nginx` class) correctly configured, backend endpoints wired
-    - Curling from inside the nginx controller pod with correct Host header returns HTTP 200
-    - External curl to `https://44b4e4cf-be08-426a-927a-82ce0200e56b.prod.opc.choreoapps.dev` fails: `SSL_ERROR_SYSCALL` (HTTPS), empty reply (HTTP)
-    - Hubble shows **zero flows on port 80/443** to the webapps nginx controller — only health check probes (port 10254) and API server traffic (port 6443)
-    - Compared with working `choreo-apim` nginx: Hubble confirms external traffic (from `world`) reaches port 443 on API ingress controller — so the issue is specific to the `choreo-webapps` LB/security group
-    - Attempted fix: added `aws-load-balancer-type: nlb` and `aws-load-balancer-scheme: internet-facing` annotations (matching `choreo-apim` svc) — new NLB provisioned but also times out on connect. Reverted to Classic ELB.
-    - **Root cause: AWS Security Groups** on worker nodes do not allow inbound traffic on the webapps NodePorts. The `choreo-apim` NLB works because its security group has the correct inbound rules. The `choreo-webapps` LB (classic or NLB) does not.
-    - **Action needed**: Check/update AWS Security Groups on worker EC2 instances to allow inbound on NodePort range (30000-32767) from the webapps ELB, or investigate why the `choreo-apim` NLB's security group was configured correctly but `choreo-webapps` was not.
-    - Note: after delete+recreate of the Service, the ELB hostname changed from `afa89d3e...` to `a6d21cc2...`. DNS for `*.prod.opc.choreoapps.dev` still points to the old hostname — needs update.
+  - [x] Webapps are reachable (PASSED with fix — 2026-04-10)
+    - Initially BLOCKED — external traffic not reaching webapps nginx controller
+    - Webapp pod was healthy internally but external curl failed with `SSL_ERROR_SYSCALL`
+    - Hubble showed zero flows on port 80/443 to the webapps nginx controller
+    - **Root cause**: The `choreo-webapps-nginx` Service was using a Classic ELB without proper annotations. AWS Security Groups on worker nodes did not allow inbound traffic on the webapps NodePorts.
+    - **Fix**: Added two annotations to the Service (matching the working `choreo-apim` NLB):
+      - `aws-load-balancer-type: nlb`
+      - `aws-load-balancer-scheme: internet-facing`
+    - Deleted the old LB Service so it gets recreated as an NLB with correct security group rules
+    - DNS for `*.prod.opc.choreoapps.dev` updated by SRE to point to new NLB hostname
+    - Verified locally before DNS update by adding webapp hostname to `/etc/hosts`
+    - **Action for production**: When creating actual OpenShift PDPs, the default LB Service for webapps nginx must include these NLB annotations. This should be configured in the platform Helm chart/values so it's automatic.
     - Backups: `os-webapps-nginx-svc-backup-20260409-1240.yaml`, `os-webapps-nginx-svc-nlb.yaml`
   - [x] CoreDNS connectivity is working (PASSED — 2026-04-09)
     - Updated `coredns-test.sh` to detect cluster type: OpenShift uses `openshift-dns` namespace with `dns.operator.openshift.io/daemonset-dns=default` label (not `kube-system` / `k8s-app=kube-dns`)
@@ -86,6 +86,35 @@
       ```
     - Without this policy: Hubble only sees L3/L4 (TCP SYN/ACK/FIN). With it: `http-request FORWARDED (HTTP/1.1 GET ...)` and `http-response FORWARDED (HTTP/1.1 404 0ms ...)`.
     - **Platform action needed**: Choreo control plane must inject CiliumNetworkPolicies with L7 rules per component at deploy time (it knows the port from `component.yaml`). The `choreo-default-policies` or a new per-component policy needs `toPorts` with `rules.http` for each service port.
+    - [X] Check Logs working in the UI (FIXED infrastructure — 2026-04-12, pending UI verification)
+      - **Blocker found (2026-04-11):** Logging API returning 500 / empty results. Four root causes found and fixed:
+        1. **OpenSearch missing users** — `logging-api` and `fluent-bit` internal users did not exist in OpenSearch. The `internal_users.yml` in `opensearch-security-config` secret only had `admin`. Both services got 401 on every request.
+           - **Runtime fix applied**: Created both users via OpenSearch REST API with admin credentials.
+           - **Persistent fix needed**: Update `opensearch-security-config` secret's `internal_users.yml` to include both users (see `os-opensearch-internal-users-patched-20260411.yaml`), then re-run the security config update job.
+        2. **Fluent Bit can't read log files (OpenShift SCC)** — All log lines were `Permission denied` for `/var/log/containers/*.log`. Fluent Bit SA (`fluent-bit`) had no SCC grant, defaulted to `restricted` which blocks host path reads.
+           - **Fix applied**: Granted `privileged` SCC to `fluent-bit` SA via `kubectl patch scc privileged`.
+        3. **Fluent Bit running as wrong UID** — Even with `privileged` SCC, the DaemonSet had `runAsUser: 10000` and `runAsNonRoot: true` hardcoded in the container securityContext. UID 10000 can't read root-owned log files on OpenShift/CRI-O nodes. Additionally, the init container (`set-volume-ownership`) was chowning the SQLite DB to `10000:10000`, causing "readonly database" errors when main container switched to UID 0.
+           - **Fix applied**: Patched DaemonSet — `runAsUser: 0`, `runAsNonRoot: false`, init container `chown 0:0`.
+        4. **SELinux blocking hostPath reads + FluxCD reverting patches** (2026-04-12):
+           - Even with `runAsUser: 0` and `privileged` SCC, OpenShift SELinux still blocked hostPath reads because the container securityContext had `privileged: false` and `allowPrivilegeEscalation: false`. On OpenShift, `privileged: true` in securityContext is required to bypass SELinux enforcement on hostPath volumes.
+           - FluxCD `choreo-fluent-bit` HelmRelease reconciled overnight and **reverted all DaemonSet patches** back to original values (`runAsUser: 10000`). This meant fixes from 2026-04-11 were undone.
+           - **Fix applied**: Suspended FluxCD HelmRelease (`spec.suspend: true`), then patched DaemonSet with full privileged securityContext: `privileged: true`, `runAsUser: 0`, `runAsNonRoot: false`, `readOnlyRootFilesystem: false`, `allowPrivilegeEscalation: true`.
+           - Fix script: `os-fluent-bit-scc-fix-20260411.sh` (updated with all steps including Flux suspend).
+      - **Result** (2026-04-12): All 9 Fluent Bit pods running (0 restarts), `container-logs-2026-04-12` index has 31k+ docs. Historical data being re-indexed (some 409 duplicate conflicts — harmless, will clear after catch-up).
+      - **Persistence note**: FluxCD HelmRelease is **suspended**. Helm values must be updated before resuming, otherwise patches will be reverted again. Changes needed in Helm values:
+        - `securityContext.privileged: true`, `runAsUser: 0`, `runAsNonRoot: false`, `readOnlyRootFilesystem: false`, `allowPrivilegeEscalation: true`
+        - Init container `chown 0:0` instead of `10000:10000`
+        - OpenSearch security config secret needs `internal_users.yml` update for `fluent-bit` and `logging-api` users
+      - Backups: `os-opensearch-security-config-backup-20260411.yaml`, `os-fluent-bit-daemonset-backup-20260411.yaml`
+    - [ ] Insights/metrics working in the UI (NOT WORKING — 2026-04-12)
+      - The obsapi (`choreo-obsapi-v2`) queries Thanos for HTTP metrics filtered by `releaseId`, but Hubble metrics in Thanos have no Choreo-specific labels (`releaseId`, `componentId`, `namespace`, etc.).
+      - `hubble_http_requests_total` only has: `destination` (format `namespace/pod-name`), `source`, `reporter`, `status`, `prometheus`. No separate `namespace` label.
+      - The `hubble-metrics` config in `cilium-config` is: `httpV2:destinationContext=pod;sourceContext=pod;http_requests_total=status;http_request_duration_seconds=status` — same as DEV cluster. The `pod` context embeds namespace inside the destination/source labels rather than as a separate label.
+      - L7 visibility policy (`l7-visibility-test`) was updated to include port 8080 (was only 9090). After update, Hubble correctly shows `http-request`/`http-response` flows and `hubble_http_requests_total` is populated in Thanos for the workload namespace.
+      - **Root cause**: The obsapi cannot map `releaseId` to Hubble metric labels. There is no metric relabeling in Prometheus that adds Choreo labels (`releaseId`, `componentId`) to Hubble metrics. The obsapi needs either:
+        1. Prometheus relabeling rules to extract `namespace` from `destination` label and add Choreo-specific labels (via kube-state-metrics or a label mapping service), or
+        2. The obsapi code to translate `releaseId` → pod/namespace and query using `destination=~"namespace/.*"` pattern.
+      - **Platform action needed**: Choreo platform must configure metric relabeling or the obsapi query logic to bridge the gap between Choreo's `releaseId` and Hubble's pod-level labels.
 - [x] Transparent encryption (PASSED with fix — 2026-04-09)
   - Initially FAILED — `enable-wireguard` key was missing from `cilium-config` ConfigMap (present in DEV cluster).
   - Patched `cilium-config` with `enable-wireguard: "true"`, rolled out Cilium DaemonSet. Backup: `os-cilium-config-backup-20260409-0900.yaml`.

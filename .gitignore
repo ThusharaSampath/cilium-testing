@@ -30,5 +30,8 @@ verification/screenshots/
 verification/test-results/
 verification/node_modules/
 verification/collected-urls.json
+verification/.verification-state.json
+verification/.choreo-token.json
+verification/console.choreo.dev.har
 
 kubeconfig

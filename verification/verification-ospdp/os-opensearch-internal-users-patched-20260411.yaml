@@ -1,0 +1,29 @@
+# Patched internal_users.yml for OpenSearch security config
+# Date: 2026-04-11
+# Changes: Added fluent-bit and logging-api users (were missing, causing 401s)
+#
+# To apply: Update the opensearch-security-config secret with this content
+# in the internal_users.yml key, then restart the securityconfig-update job.
+#
+# internal_users.yml content:
+_meta:
+  type: internalusers
+  config_version: 2
+admin:
+  hash: "$2a$12$TIZAvSTg/Q9Bmfayjj8wIOpZLRYjUBOCLsEMX48gO1bFAdEXQYSf."
+  reserved: true
+  backend_roles:
+    - admin
+  description: Admin user
+fluent-bit:
+  hash: "$2y$12$3HmJ61QRbV7Ba09N1Fco3e/ah7xKIvEq7h0/KjNzoQQRdmxr49jaW"
+  reserved: false
+  backend_roles:
+    - admin
+  description: Fluent Bit log shipper user
+logging-api:
+  hash: "$2y$12$BSNLjxPoRbOVNZ8I.MZZOOSdt8NAg7F808ecI3qKVm6E/6C/6uR9W"
+  reserved: false
+  backend_roles:
+    - admin
+  description: Logging API service user

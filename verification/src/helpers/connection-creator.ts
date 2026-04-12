@@ -5,14 +5,14 @@ import { handleGoogleReloginIfNeeded } from "./google-relogin.js";
 /**
  * Creates a connection for a component in the Choreo UI.
  *
- * Flow based on Choreo console:
- * 1. Navigate to the component's Connections page (derived from componentUrl)
- * 2. Click "Service" to create a service connection
- * 3. Select the target service from the resource list
+ * Flow (from Playwright codegen recording, April 2026):
+ * 1. Navigate to the component's Connections page
+ * 2. Click "Service Connection" button
+ * 3. Search for target service and select it
  * 4. Fill in the connection name
- * 5. Click "Create" to finalize the connection
+ * 5. Click "Create"
  *
- * @param componentUrl - The base URL of the component, extracted after auto-redirect
+ * @param componentUrl - The base URL of the component
  *                       (e.g., .../components/auto-generated-slug)
  */
 export async function createConnection(
@@ -28,46 +28,43 @@ export async function createConnection(
   await page.waitForLoadState("networkidle");
   await handleGoogleReloginIfNeeded(page);
 
-  // Step 2: Click "Service" connection type card
-  const serviceCard = page.locator('[data-cyid="service-card-button"]');
-  await serviceCard.waitFor({ state: "visible", timeout: 30_000 });
-  await serviceCard.click();
+  // Check if connection already exists (idempotency)
+  const existingConnection = page.getByText(connection.name, { exact: true });
+  if (await existingConnection.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    console.log(`  Connection "${connection.name}" already exists — skipping.`);
+    return;
+  }
 
-  // Wait for the "Select a Resource" page to load
-  await page.getByText("Select a Resource").waitFor({
-    state: "visible",
-    timeout: 30_000,
-  });
-  await page.waitForLoadState("networkidle");
+  // Step 2: Click "Service Connection" button
+  await page
+    .getByRole("button", { name: /Service Connection/i })
+    .click({ timeout: 15_000 });
 
-  // Step 3: Search for the target service and click the first matching card
-  const searchInput = page.getByPlaceholder("Search Resources");
+  // Step 3: Search for the target service and click it
+  const searchInput = page.getByRole("textbox", { name: "Search resources" });
   await searchInput.waitFor({ state: "visible", timeout: 15_000 });
   await searchInput.fill(connection.targetServiceName);
   await page.waitForTimeout(2000);
 
-  // Click the resource card that has the exact service name in its h4
-  const targetCard = page
-    .locator(".MuiCardContent-root")
-    .filter({ has: page.locator("h4", { hasText: new RegExp(`^${connection.targetServiceName}$`) }) });
-  await targetCard.first().waitFor({ state: "visible", timeout: 15_000 });
-  await targetCard.first().click();
-  await page.waitForLoadState("networkidle");
+  // Click the matching service button
+  await page
+    .getByRole("button", { name: new RegExp(connection.targetServiceName, "i") })
+    .first()
+    .click({ timeout: 15_000 });
 
   // Step 4: Fill in the connection name
-  const nameInput = page.getByPlaceholder("Enter Connection Name");
+  const nameInput = page.getByRole("textbox", { name: "Name" });
   await nameInput.waitFor({ state: "visible", timeout: 15_000 });
   await nameInput.fill(connection.name);
 
   // Step 5: Click "Create" to finalize the connection
   await page
-    .locator('[data-cyid="connection-create-button"]')
+    .getByRole("button", { name: "Create" })
     .click({ timeout: 15_000 });
 
-  // Wait for the connection detail page to load
-  await page
-    .getByText("How to use the Connection")
-    .waitFor({ state: "visible", timeout: 30_000 });
+  // Wait for navigation away from the creation form
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(2000);
 
   console.log(`  Connection created successfully: ${connection.name}`);
   console.log(

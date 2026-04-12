@@ -170,6 +170,10 @@ All cluster scripts automatically target the correct cluster.
 | `os-cilium-config.yaml` | Reference copy of the OS cluster's `cilium-config` ConfigMap for comparison. |
 | `os-allow-world-except-az-metadata-backup-20260410.yaml` | Backup of original `allow-world-except-az-metadata` CCNP before patching. Used `egress` allow-except pattern which was ineffective due to `choreo-default-policies` allowing `0.0.0.0/0`. |
 | `os-allow-world-except-az-metadata-patched-20260410.yaml` | Patched `allow-world-except-az-metadata` CCNP using `egressDeny` with `toCIDR: 169.254.169.254/32` (matching DEV cluster's `deny-az-metadata` pattern). Helm-managed — may be reconciled by Flux. |
+| `os-opensearch-security-config-backup-20260411.yaml` | Backup of `opensearch-security-config` secret before adding `fluent-bit` and `logging-api` users. |
+| `os-fluent-bit-daemonset-backup-20260411.yaml` | Backup of `fluent-bit` DaemonSet before SCC fix. |
+| `os-opensearch-internal-users-patched-20260411.yaml` | Patched `internal_users.yml` with `fluent-bit` and `logging-api` users added (with bcrypt hashes). Must be applied to `opensearch-security-config` secret for persistence. |
+| `os-fluent-bit-scc-fix-20260411.sh` | Script to grant `privileged` SCC to `fluent-bit` SA and restart the DaemonSet. Fixes Permission denied errors reading `/var/log/containers/`. |
 
 ```bash
 # Connect to OS cluster

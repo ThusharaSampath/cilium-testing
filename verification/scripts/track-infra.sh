@@ -29,8 +29,12 @@ run_step "infra_encryption" "Step 3/5: Transparent encryption" \
 run_step "infra_hubble" "Step 4/5: Hubble observability" \
   bash "$CLUSTER_SCRIPTS/hubble-observability-test.sh"
 
-# Step 5: Cross-node communication (longest — ~5 min)
-run_step "infra_cross_node" "Step 5/5: Cross-node communication" \
+# Step 5: Metadata endpoint blocking
+run_step "infra_metadata" "Step 5/6: Metadata endpoint blocking" \
+  bash "$CLUSTER_SCRIPTS/metadata-endpoint-test.sh"
+
+# Step 6: Cross-node communication (longest — ~5 min)
+run_step "infra_cross_node" "Step 6/6: Cross-node communication" \
   bash "$CLUSTER_SCRIPTS/cross-node-test.sh"
 
 # Optional: Gateway error monitor (~10 min)

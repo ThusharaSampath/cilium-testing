@@ -68,13 +68,6 @@ export const components: ComponentDefinition[] = [
     buildPreset: "Go",
   },
   {
-    name: "proxy-service",
-    displayName: "Proxy Service",
-    sourceDirectory: "proxy-service",
-    networkVisibility: "Public",
-    buildPreset: "Go",
-  },
-  {
     name: "project-level-server",
     displayName: "Project Level Server",
     sourceDirectory: "service-to-service/project-level/server",

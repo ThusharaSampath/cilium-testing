@@ -8,37 +8,18 @@
  * Idempotent — fetches existing components first and skips them.
  */
 
-import * as fs from "fs";
-import * as path from "path";
 import { config } from "../config/env.js";
 import {
   type ApiComponentDefinition,
   apiComponents,
   getComponentsByGroup,
 } from "../config/api-components.js";
+import { loadToken } from "./token-loader.js";
 
-const TOKEN_FILE = path.resolve(__dirname, "../../.choreo-token.json");
 const GRAPHQL_URL = "https://apis.choreo.dev/projects/1.0.0/graphql";
 const DELAY_BETWEEN_COMPONENTS_MS = 5_000;
 
 const ORG_ID = 83289;
-
-function loadToken(): string {
-  if (!fs.existsSync(TOKEN_FILE)) {
-    throw new Error(
-      "No token file found. Run `npm run capture:token` first."
-    );
-  }
-  const data = JSON.parse(fs.readFileSync(TOKEN_FILE, "utf-8"));
-  const ageMs = Date.now() - data.capturedAt;
-  const validMs = data.expiresIn * 1000 - 5 * 60 * 1000;
-  if (ageMs >= validMs) {
-    throw new Error(
-      "Token expired. Run `npm run capture:token` to refresh."
-    );
-  }
-  return data.token;
-}
 
 async function fetchExistingComponents(token: string): Promise<Set<string>> {
   const query = `query {

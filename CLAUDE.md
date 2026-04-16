@@ -19,7 +19,6 @@ Go services deployed as Choreo components via the public GitHub repo `ThusharaSa
 - `org-service/` — Organization-scoped service (network visibility: Organization).
 - `project-service/` — Project-scoped service (network visibility: Project).
 - `public-service/` — Publicly accessible service (network visibility: Public).
-- `proxy-service/` — Reverse proxy that forwards to a backend URL (defaults to metadata endpoint `169.254.169.254`). Used to test metadata endpoint blocking via Cilium network policies.
 - `service-to-service/project-level/server` and `client` — A pair that tests project-level service-to-service communication. The client calls the server's `/hello` endpoint via a Choreo connection.
 - `tester/` — Central test service that calls org, public, project services and the webapp. Env vars are declared in `.choreo/component.yaml` via `configForm` so they appear in Choreo's config UI:
   - `ORG_SERVICE_URL` — Connection URL for org-service

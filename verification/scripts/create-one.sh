@@ -11,7 +11,6 @@ if [ -z "$1" ]; then
   echo "  org-service"
   echo "  project-service"
   echo "  public-service"
-  echo "  proxy-service"
   echo "  project-level-server"
   echo "  project-level-client"
   echo "  tester"

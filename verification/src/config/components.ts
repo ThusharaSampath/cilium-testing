@@ -68,21 +68,21 @@ export const components: ComponentDefinition[] = [
     buildPreset: "Go",
   },
   {
-    name: "project-level-server",
-    displayName: "Project Level Server",
+    name: "server",
+    displayName: "server",
     sourceDirectory: "service-to-service/project-level/server",
     networkVisibility: "Project",
     buildPreset: "Go",
   },
   {
-    name: "project-level-client",
-    displayName: "Project Level Client",
+    name: "client",
+    displayName: "client",
     sourceDirectory: "service-to-service/project-level/client",
     networkVisibility: "Public",
     buildPreset: "Go",
     connections: [
       {
-        name: "client-to-server-con",
+        name: "client-to-server",
         targetServiceName: "server",
       },
     ],

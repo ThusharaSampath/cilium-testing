@@ -7,49 +7,39 @@ banner "Track 2: Service-to-Service Flow"
 
 check_auth
 
-# Step 1: Create server + client components (with connection)
-# Uses e2e-s2s project which has built-in idempotency (skips existing components)
-run_step "s2s_create" "Step 1/5: Create S2S components" \
-  pw_run "e2e-s2s"
+# Step 1: Create server + client components
+# Uses API-based creation with idempotency (skips existing components)
+run_step "s2s_create" "Step 1/4: Create S2S components" \
+  npm run create:api:s2s
 
 # Step 2: Poll builds for server + client
-run_step "s2s_poll_builds" "Step 2/5: Poll builds" \
-  env POLL_COMPONENTS="project-level-server,project-level-client" \
-  pw_run "poll-builds"
+run_step "s2s_poll_builds" "Step 2/4: Poll builds" \
+  npx tsx src/helpers/api-build-poller.ts "server,client"
 
-# Step 3: Manual step — user must update connection resourceRef
-if ! check_step_done "s2s_manual"; then
+# Step 3: Create connection from client to server (via Playwright UI)
+# The connection name and resourceRef are deterministic, so no manual steps needed
+run_step "s2s_connection" "Step 3/4: Create connection" \
+  bash -c "cd '$VERIFY_ROOT' && npx playwright test --project=create-connections"
+
+# After connection, user must click "Deploy" in the UI
+if ! check_step_done "s2s_deploy"; then
   echo ""
   echo -e "${YELLOW}${BOLD}╔══════════════════════════════════════════════════════════╗${NC}"
-  echo -e "${YELLOW}${BOLD}║       MANUAL STEPS REQUIRED                              ║${NC}"
+  echo -e "${YELLOW}${BOLD}║       DEPLOY CLIENT                                      ║${NC}"
   echo -e "${YELLOW}${BOLD}╠══════════════════════════════════════════════════════════╣${NC}"
   echo -e "${YELLOW}║                                                          ║${NC}"
-  echo -e "${YELLOW}║  1. Go to Choreo console → project-level-client          ║${NC}"
-  echo -e "${YELLOW}║     → Connections → copy the connection resourceRef      ║${NC}"
-  echo -e "${YELLOW}║                                                          ║${NC}"
-  echo -e "${YELLOW}║  2. Update the client's component.yaml:                  ║${NC}"
-  echo -e "${YELLOW}║     service-to-service/project-level/client/             ║${NC}"
-  echo -e "${YELLOW}║       .choreo/component.yaml                             ║${NC}"
-  echo -e "${YELLOW}║     Update the resourceRef under connectionReferences    ║${NC}"
-  echo -e "${YELLOW}║                                                          ║${NC}"
-  echo -e "${YELLOW}║  3. Commit and push:                                     ║${NC}"
-  echo -e "${YELLOW}║     git add . && git commit -m 'update s2s ref' && push  ║${NC}"
-  echo -e "${YELLOW}║                                                          ║${NC}"
-  echo -e "${YELLOW}║  4. Rebuild the client component in Choreo               ║${NC}"
+  echo -e "${YELLOW}║  1. Go to Choreo console → client component              ║${NC}"
+  echo -e "${YELLOW}║  2. Click \"Deploy\" to redeploy with the connection        ║${NC}"
+  echo -e "${YELLOW}║  3. Wait for deployment to succeed                       ║${NC}"
   echo -e "${YELLOW}║                                                          ║${NC}"
   echo -e "${YELLOW}${BOLD}╚══════════════════════════════════════════════════════════╝${NC}"
 
-  prompt_continue "Press Enter after completing the manual steps above..."
-  mark_step_done "s2s_manual"
+  prompt_continue "Press Enter after deployment succeeds..."
+  mark_step_done "s2s_deploy"
 fi
 
-# Step 4: Poll client rebuild
-run_step "s2s_poll_rebuild" "Step 4/5: Poll client rebuild" \
-  env POLL_COMPONENTS="project-level-client" \
-  pw_run "poll-builds"
-
-# Step 5: Run S2S test via test console
-run_step "s2s_test" "Step 5/5: Run S2S test" \
-  pw_run "full-test" -g "S2S"
+# Step 4: Run S2S test via API
+run_step "s2s_test" "Step 4/4: Run S2S test" \
+  npx tsx src/helpers/api-test-runner.ts "client" "/"
 
 banner "Track 2: Service-to-Service Flow — COMPLETE"

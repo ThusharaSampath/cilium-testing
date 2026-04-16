@@ -19,7 +19,12 @@
     "track:tester": "bash scripts/track-tester.sh",
     "track:s2s": "bash scripts/track-s2s.sh",
     "track:infra": "bash scripts/track-infra.sh",
-    "verify": "bash scripts/verify.sh"
+    "verify": "bash scripts/verify.sh",
+    "create:api": "npx tsx src/helpers/api-component-creator.ts",
+    "create:api:tester": "npx tsx src/helpers/api-component-creator.ts tester",
+    "create:api:s2s": "npx tsx src/helpers/api-component-creator.ts s2s",
+    "poll:api": "npx tsx src/helpers/api-build-poller.ts",
+    "test:api": "npx tsx src/helpers/api-test-runner.ts"
   },
   "keywords": [],
   "author": "",

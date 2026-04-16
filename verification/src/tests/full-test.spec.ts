@@ -34,7 +34,7 @@ test.describe.serial("Full Verification Test", () => {
   test("Test 2: S2S client /hello endpoint", async ({ page }) => {
     const responseBody = await runTestConsole(
       page,
-      "project-level-client",
+      "client",
       "/hello"
     );
     const parsed = JSON.parse(responseBody);

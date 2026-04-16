@@ -10,7 +10,6 @@ This repository contains tools and services for verifying Cilium compatibility o
 | `org-service/` | Go service with Organization-level network visibility |
 | `project-service/` | Go service with Project-level network visibility |
 | `public-service/` | Go service with Public network visibility |
-| `proxy-service/` | Go reverse proxy (defaults to metadata endpoint `169.254.169.254`) |
 | `service-to-service/` | Client + Server pair for project-level service-to-service communication |
 | `cross-node-request-drop-test.yaml` | K8s DaemonSet manifest for cross-node request reliability testing |
 | `tester/` | Central test service that calls org, public, project services and webapp |

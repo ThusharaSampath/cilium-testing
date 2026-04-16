@@ -124,7 +124,6 @@ Available components:
 | `org-service` | `org-service` | Organization-level visibility |
 | `project-service` | `project-service` | Project-level visibility |
 | `public-service` | `public-service` | Public visibility |
-| `proxy-service` | `proxy-service` | Proxies to metadata endpoint |
 | `tester` | `tester` | Central test service calling all others |
 | `react-single-page-app` | `react-single-page-app` | React webapp for reachability testing |
 | `project-level-server` | `service-to-service/project-level/server` | Server for service-to-service test |

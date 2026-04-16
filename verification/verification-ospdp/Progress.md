@@ -20,6 +20,7 @@
     - **Fix**: Patched `allow-world-except-az-metadata` CCNP to use `egressDeny` with `toCIDR: 169.254.169.254/32` (matching DEV cluster pattern). After patch, proxy-service returns connection timeout instead of metadata response.
     - Backups: `os-allow-world-except-az-metadata-backup-20260410.yaml`, `os-allow-world-except-az-metadata-patched-20260410.yaml`
     - **Note**: This CCNP is Helm-managed (`choreo-pdp` release via FluxCD) — Flux may reconcile it back. Permanent fix requires updating the Helm chart values.
+    - Improved this test by migrating to a bash script instead of choreo component
   - [x] Public services are reachable via the gateway
   - [ ] Organization-level services are reachable via the internal gateway (This was not worked in DEV CDP)
   - [x] Project-level services are reachable via another component within the same project

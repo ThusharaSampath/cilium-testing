@@ -11,28 +11,13 @@
  *   4. Exit 0 when all succeed, exit 1 on failure/timeout
  */
 
-import * as fs from "fs";
-import * as path from "path";
 import { config } from "../config/env.js";
+import { loadToken } from "./token-loader.js";
 
-const TOKEN_FILE = path.resolve(__dirname, "../../.choreo-token.json");
 const GRAPHQL_URL = "https://apis.choreo.dev/projects/1.0.0/graphql";
 const POLL_INTERVAL_MS = 30_000;
 const POLL_TIMEOUT_MS =
   parseInt(process.env.BUILD_WAIT_MINUTES ?? "15") * 60 * 1000;
-
-function loadToken(): string {
-  if (!fs.existsSync(TOKEN_FILE)) {
-    throw new Error("No token file found. Run `npm run capture:token` first.");
-  }
-  const data = JSON.parse(fs.readFileSync(TOKEN_FILE, "utf-8"));
-  const ageMs = Date.now() - data.capturedAt;
-  const validMs = data.expiresIn * 1000 - 5 * 60 * 1000;
-  if (ageMs >= validMs) {
-    throw new Error("Token expired. Run `npm run capture:token` to refresh.");
-  }
-  return data.token;
-}
 
 interface ComponentInfo {
   id: string;

@@ -41,19 +41,28 @@ Three types of automation:
 1. **Playwright (TypeScript)** — Browser automation that creates Choreo components through the console UI, collects endpoint URLs, and invokes the test console. Uses the "Public GitHub Repository" flow. Config is in `.env` for dynamic org/project targeting.
 
 2. **E2E Flows** — Two end-to-end Playwright flows that chain multiple steps together:
-   - `e2e:tester` — Creates 5 components (org, public, project, webapp, tester), then prints next steps (wait for builds, collect URLs, update config, run full-test).
-   - `e2e:s2s` — Creates server + client components with connection, then prints manual steps (wait for builds, update connection resourceRef, commit, push, rebuild, run full-test).
+   - `e2e:tester` — Creates 5 components (org, public, project, webapp, tester) with idempotency (skips existing).
+   - `e2e:s2s` — Creates server + client components with idempotency (connection created separately after builds complete).
    - `full-test` — Runs both tester `/test` and s2s client `/hello` test consoles, reports combined pass/fail results.
+
+3. **Bash Orchestration** (`verification/scripts/`) — End-to-end orchestration scripts that chain Playwright steps together with state tracking for resumability:
+   - `verify.sh` — Master orchestrator. Menu to run both tracks, tester only, or s2s only. Supports `--reset` to clear state.
+   - `track-tester.sh` — Track 1: create → poll builds → collect URLs → update config → poll redeploy → test.
+   - `track-s2s.sh` — Track 2: create → poll builds → [manual resourceRef step] → poll rebuild → test.
+   - `common.sh` — Shared utilities: logging, auth check, JSON state file (`.verification-state.json`) for resumability.
 
 3. **Cluster shell scripts** (`verification/scripts/cluster/`) — kubectl-based checks run against the private AKS cluster via SSH tunnel proxy (`HTTPS_PROXY=http://localhost:3129`). All scripts source `common.sh` for shared config.
 
 ### Reusable Helpers (`verification/src/helpers/`)
+- `token-capturer.ts` — Captures the Choreo STS token by intercepting `sts.choreo.dev/oauth2/token` response during page navigation. Caches to `.choreo-token.json` with expiry tracking.
 - `build-poller.ts` — Intercepts `deploymentStatusByVersion` GraphQL calls to capture componentId/versionId/token, then polls build status until success or timeout.
 - `url-collector.ts` — Navigates to component overview pages and extracts endpoint URLs.
 - `tester-config-updater.ts` — Fills tester env vars via the Configure & Deploy wizard.
 - `test-console-runner.ts` — Opens a component's test console, executes an endpoint, and returns the response body.
 - `component-creator.ts` — Creates components via the Choreo UI and returns build details for polling.
-- `connection-creator.ts` — Creates service connections between components.
+- `connection-creator.ts` — Creates service connections between components (with idempotency — skips existing).
+- `google-relogin.ts` — Handles Google account chooser re-login when session expires.
+- `component-fetcher.ts` — Queries existing components in the project via GraphQL API.
 
 ## Architecture Notes
 
@@ -79,7 +88,8 @@ Defined in `verification/verification-steps.md`. Current automation status:
 | E2E tester flow | Yes | Playwright (`npm run e2e:tester`) |
 | E2E service-to-service flow | Partial | Playwright (`npm run e2e:s2s`) — connection resourceRef update is manual |
 | Full verification test | Yes | Playwright (`npm run full-test`) |
-| Build status polling | Available | GraphQL polling via `build-poller.ts` (not used in e2e flows, available for future use) |
+| Build status polling | Yes | `npm run poll:builds` with `POLL_COMPONENTS` env var, uses STS token capture |
+| STS token capture | Yes | `npm run capture:token` — intercepts `sts.choreo.dev` token exchange |
 | HTTP retries | Not yet | Needs Choreo endpoint config + log check |
 | Cilium network policy enforcement | Partial | Webapp reachability via tester `/test/webapp`; rest needs curl from pods |
 | 403s / upstream-not-found monitoring | Not yet | Needs `az monitor log-analytics query` |
@@ -93,18 +103,38 @@ cd verification && bash scripts/setup.sh
 # Login to Choreo (one-time)
 npm run login
 
-# --- E2E Flows (recommended) ---
+# --- Orchestrated Flows (recommended) ---
 
-# E2E: Create tester components, poll builds, then follow printed next steps
+# Full verification: both tracks with state tracking and resumability
+bash scripts/verify.sh
+
+# Tester track only: create → poll → collect URLs → update config → test
+bash scripts/track-tester.sh
+
+# S2S track only: create → poll → [manual step] → test
+bash scripts/track-s2s.sh
+
+# Reset state to start fresh
+bash scripts/verify.sh --reset
+
+# --- E2E Flows (individual Playwright projects) ---
+
+# Create tester components (idempotent)
 npm run e2e:tester
 
-# E2E: Create s2s server+client, poll builds, then follow printed manual steps
+# Create s2s server+client (idempotent)
 npm run e2e:s2s
 
 # Full test: Run tester + s2s client test consoles with combined report
 npm run full-test
 
 # --- Individual Steps ---
+
+# Capture STS token (saved to .choreo-token.json)
+npm run capture:token
+
+# Poll build status (requires POLL_COMPONENTS env var)
+POLL_COMPONENTS=tester,org-service npm run poll:builds
 
 # Create all components
 npm run create:all

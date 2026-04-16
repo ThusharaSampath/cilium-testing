@@ -23,13 +23,7 @@ test.describe.serial("E2E Service-to-Service Flow", () => {
       }
 
       console.log(`Creating component: ${component.name}`);
-      const result = await createComponent(page, component);
-
-      if (component.connections) {
-        for (const connection of component.connections) {
-          await createConnection(page, result.componentUrl, connection);
-        }
-      }
+      await createComponent(page, component);
     }
   });
 

@@ -69,10 +69,20 @@ export async function captureStsToken(page: Page): Promise<string> {
     });
   });
 
-  // Navigate to project home — triggers the STS token exchange
-  await page.goto(`${config.projectUrl}/home`);
-  await handleGoogleReloginIfNeeded(page);
+  // Navigate to project home — may redirect to Google sign-in
+  console.log(`[token] Navigating to: ${config.projectUrl}/home`);
+  await page.goto(`${config.projectUrl}/home`, { waitUntil: "commit" });
 
+  // Wait for page to settle (Choreo → Asgardeo → Google redirect chain)
+  await page.waitForLoadState("domcontentloaded").catch(() => {});
+  console.log(`[token] Page loaded. URL: ${page.url()}`);
+
+  // Handle Google re-login if session expired
+  await handleGoogleReloginIfNeeded(page);
+  console.log(`[token] After relogin check. URL: ${page.url()}`);
+
+  // Wait for the STS token exchange to complete
+  console.log("[token] Waiting for STS token exchange...");
   const captured = await tokenPromise;
 
   // Save to file for reuse across steps

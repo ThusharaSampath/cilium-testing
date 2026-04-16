@@ -4,7 +4,7 @@ import { createComponent } from "../helpers/component-creator.js";
 import { createConnection } from "../helpers/connection-creator.js";
 import { fetchExistingComponents } from "../helpers/component-fetcher.js";
 
-const s2sComponents = ["project-level-server", "project-level-client"];
+const s2sComponents = ["server", "client"];
 
 const targetComponents = components.filter((c) =>
   s2sComponents.includes(c.name)

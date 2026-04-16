@@ -106,15 +106,25 @@
         - Init container `chown 0:0` instead of `10000:10000`
         - OpenSearch security config secret needs `internal_users.yml` update for `fluent-bit` and `logging-api` users
       - Backups: `os-opensearch-security-config-backup-20260411.yaml`, `os-fluent-bit-daemonset-backup-20260411.yaml`
-    - [ ] Insights/metrics working in the UI (NOT WORKING — 2026-04-12)
+    - [x] Insights/metrics working in the UI (PASSED with fixes — 2026-04-16)
       - The obsapi (`choreo-obsapi-v2`) queries Thanos for HTTP metrics filtered by `releaseId`, but Hubble metrics in Thanos have no Choreo-specific labels (`releaseId`, `componentId`, `namespace`, etc.).
       - `hubble_http_requests_total` only has: `destination` (format `namespace/pod-name`), `source`, `reporter`, `status`, `prometheus`. No separate `namespace` label.
       - The `hubble-metrics` config in `cilium-config` is: `httpV2:destinationContext=pod;sourceContext=pod;http_requests_total=status;http_request_duration_seconds=status` — same as DEV cluster. The `pod` context embeds namespace inside the destination/source labels rather than as a separate label.
       - L7 visibility policy (`l7-visibility-test`) was updated to include port 8080 (was only 9090). After update, Hubble correctly shows `http-request`/`http-response` flows and `hubble_http_requests_total` is populated in Thanos for the workload namespace.
-      - **Root cause**: The obsapi cannot map `releaseId` to Hubble metric labels. There is no metric relabeling in Prometheus that adds Choreo labels (`releaseId`, `componentId`) to Hubble metrics. The obsapi needs either:
-        1. Prometheus relabeling rules to extract `namespace` from `destination` label and add Choreo-specific labels (via kube-state-metrics or a label mapping service), or
-        2. The obsapi code to translate `releaseId` → pod/namespace and query using `destination=~"namespace/.*"` pattern.
-      - **Platform action needed**: Choreo platform must configure metric relabeling or the obsapi query logic to bridge the gap between Choreo's `releaseId` and Hubble's pod-level labels.
+      - **Previous root cause analysis was incorrect.** The recording rules in the Prometheus Helm chart (`http-metrics-by-release-deprecated`, `http-metrics-by-release-rates`) already handle the mapping from Hubble's pod-level labels to Choreo's `release_id` by joining with `kube_pod_labels`. The templates and PrometheusRules are correctly deployed.
+      - **Actual root cause (2026-04-16):** Two issues preventing `kube-state-metrics` from working:
+        1. **SCC violation** — Pod failed to start for 13 days. Deployment runs as UID `65534` with `fsGroup: 65534` and `seccompProfile: RuntimeDefault`. No SCC permitted this combination — `anyuid` rejected the seccomp profile, `restricted-v2` rejected the UID.
+           - 3044+ `FailedCreate` events on the ReplicaSet
+           - **Fix**: Granted `privileged` SCC to `system:serviceaccount:choreo-observability:kube-state-metrics`
+           - Backup: `os-scc-privileged-backup-20260416.yaml`, `os-scc-anyuid-backup-20260416.yaml`
+        2. **RBAC — ClusterRoleBinding pointing to wrong namespace** — Same issue as `prometheus-operator`. The `kube-state-metrics` CRB has `app.kubernetes.io/managed-by: cluster-monitoring-operator` label, causing OpenShift's monitoring operator to overwrite the subject namespace to `openshift-monitoring` instead of `choreo-observability`. kube-state-metrics pod started but couldn't list pods/services/jobs.
+           - **Fix**: Created new CRB `kube-state-metrics-choreo-observability` (not managed by OpenShift CMO) binding ClusterRole `kube-state-metrics` to SA `choreo-observability:kube-state-metrics`
+           - Applied: `kube-state-metrics-crb-fix.yaml`. Backup: `os-kube-state-metrics-crb-backup-20260416.yaml`
+        - After both fixes: `kube-state-metrics` running, `kube_pod_labels` has 6 series with `label_release_id`, cAdvisor recording rules producing `choreo_component_cpu_usage_seconds_total` (3 series with proper `release_id`)
+        - Hubble recording rules (`choreo_component_http_requests_total`) still empty because L7 visibility policy is only applied to one namespace and needs active HTTP traffic to generate `hubble_http_requests_total` for user workload pods
+      - **Persistence note**: Platform Helm chart for OpenShift DPs needs:
+        - `privileged` SCC grant for `kube-state-metrics` SA (or update pod securityContext to remove seccompProfile and use UID in OpenShift range)
+        - CRB must not have `app.kubernetes.io/managed-by: cluster-monitoring-operator` label, or use a separate CRB not managed by OpenShift CMO
 - [x] Transparent encryption (PASSED with fix — 2026-04-09)
   - Initially FAILED — `enable-wireguard` key was missing from `cilium-config` ConfigMap (present in DEV cluster).
   - Patched `cilium-config` with `enable-wireguard: "true"`, rolled out Cilium DaemonSet. Backup: `os-cilium-config-backup-20260409-0900.yaml`.

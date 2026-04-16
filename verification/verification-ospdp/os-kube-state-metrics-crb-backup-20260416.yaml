@@ -1,0 +1,32 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    meta.helm.sh/release-name: prometheus
+    meta.helm.sh/release-namespace: choreo-observability
+  creationTimestamp: "2026-04-03T03:15:58Z"
+  labels:
+    app.kubernetes.io/component: exporter
+    app.kubernetes.io/instance: prometheus
+    app.kubernetes.io/managed-by: cluster-monitoring-operator
+    app.kubernetes.io/name: kube-state-metrics
+    app.kubernetes.io/part-of: openshift-monitoring
+    app.kubernetes.io/version: 2.16.0
+    choreo.component: kube-state-metrics
+    choreo.group: kube-prometheus-stack
+    choreo.part-of: choreo-observability
+    helm.sh/chart: kube-state-metrics-6.1.0
+    helm.toolkit.fluxcd.io/name: prometheus
+    helm.toolkit.fluxcd.io/namespace: choreo-observability
+    release: prometheus
+  name: kube-state-metrics
+  resourceVersion: "335678"
+  uid: 89e67cb4-88e8-472d-b3d5-f98ba6ead033
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-state-metrics
+subjects:
+- kind: ServiceAccount
+  name: kube-state-metrics
+  namespace: openshift-monitoring

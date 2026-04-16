@@ -82,6 +82,13 @@ export default defineConfig({
       },
     },
     {
+      name: "capture-token",
+      testMatch: "capture-token.spec.ts",
+      use: {
+        storageState: authFile,
+      },
+    },
+    {
       name: "poll-builds",
       testMatch: "poll-builds.spec.ts",
       timeout: 25 * 60 * 1000, // 25 minutes (longer than BUILD_WAIT_MINUTES default)

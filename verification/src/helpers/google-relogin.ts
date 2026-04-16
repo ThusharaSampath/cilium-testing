@@ -10,6 +10,9 @@ import { config } from "../config/env.js";
 export async function handleGoogleReloginIfNeeded(
   page: Page
 ): Promise<void> {
+  // Wait briefly for any redirect to settle (Choreo → Asgardeo → Google)
+  await page.waitForTimeout(2000);
+
   // Check if we landed on a Google sign-in page
   if (!page.url().includes("accounts.google.com")) {
     return;

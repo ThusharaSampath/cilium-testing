@@ -25,6 +25,7 @@
     "poll:api": "npx tsx src/helpers/api-build-poller.ts",
     "test:api": "npx tsx src/helpers/api-test-runner.ts",
     "poll:deployment": "npx tsx src/helpers/api-deployment-poller.ts",
+    "redeploy": "npx tsx src/helpers/api-redeployer.ts",
     "test:webapp": "npx tsx src/helpers/api-webapp-tester.ts"
   },
   "keywords": [],

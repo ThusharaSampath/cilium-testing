@@ -42,7 +42,7 @@ After setup, edit `verification/.env` with your Choreo org and project details:
 ```
 CHOREO_CONSOLE_URL=https://consolev2.preview-dv.choreo.dev
 CHOREO_ORG_HANDLE=<your-org-handle>
-CHOREO_PROJECT_NAME=<your-project-name>
+CHOREO_PROJECT_HANDLER=<your-project-name>
 GITHUB_REPO_NAME=ThusharaSampath/cilium-testing
 GITHUB_BRANCH=main
 ```

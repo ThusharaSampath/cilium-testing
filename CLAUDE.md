@@ -62,6 +62,7 @@ Three types of automation:
 - `connection-creator.ts` — Creates service connections between components (with idempotency — skips existing).
 - `google-relogin.ts` — Handles Google account chooser re-login when session expires.
 - `component-fetcher.ts` — Queries existing components in the project via GraphQL API.
+- `api-redeployer.ts` — Redeploys a component via the `deployDeploymentTrack` GraphQL mutation. Fetches buildId, deploymentPipelineId, and apiSettings automatically.
 
 ## Architecture Notes
 
@@ -110,7 +111,7 @@ bash scripts/verify.sh
 # Tester track only: create → poll → collect URLs → update config → test
 bash scripts/track-tester.sh
 
-# S2S track only: create → poll → [manual step] → test
+# S2S track only: create → poll → redeploy → test
 bash scripts/track-s2s.sh
 
 # Reset state to start fresh
@@ -147,6 +148,9 @@ npm run collect:urls
 # Update tester env config and redeploy
 npm run update:config
 
+# Redeploy a component (e.g. after adding connections)
+npm run redeploy -- client
+
 # Invoke tester /test endpoint via Choreo test console
 npm run test:console
 
@@ -163,7 +167,7 @@ bash scripts/cluster/coredns-test.sh
 |---|---|---|
 | `CHOREO_CONSOLE_URL` | — | Choreo console base URL |
 | `CHOREO_ORG_HANDLE` | — | Organization handle |
-| `CHOREO_PROJECT_NAME` | — | Project name |
+| `CHOREO_PROJECT_HANDLER` | — | Project name |
 | `GITHUB_REPO_NAME` | — | Public GitHub repo (e.g., `ThusharaSampath/cilium-testing`) |
 | `GITHUB_BRANCH` | — | Git branch |
 | `GOOGLE_ACCOUNT_NAME` | — | Google account name for SSO re-login |

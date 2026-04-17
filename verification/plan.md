@@ -76,7 +76,7 @@ verify.sh (master — menu: all / tester / s2s / infra)
   │     1. Create 5 components (incl. webapp — api-component-creator, idempotent)
   │     2. Poll builds for services only (webapp build checked in step 7)
   │     3. Create 3 connections (Playwright create-tester-connections)
-  │     4. ⏸ MANUAL: click Deploy in Choreo UI
+  │     4. Redeploy tester (api-redeployer)
   │     5. Poll deployment ACTIVE (api-deployment-poller)
   │     6. Run tester /test (api-test-runner)
   │     7. Test webapp (poll build → poll deploy → curl invokeUrl)
@@ -85,7 +85,7 @@ verify.sh (master — menu: all / tester / s2s / infra)
   │     1. Create server + client (api-component-creator, idempotent)
   │     2. Poll builds (api-build-poller, parallel)
   │     3. Create connection (Playwright connection-creator)
-  │     4. ⏸ MANUAL: click Deploy in Choreo UI
+  │     4. Redeploy client (api-redeployer)
   │     5. Run s2s client / (api-test-runner)
   │
   └── track-infra.sh (kubectl cluster tests)                [WORKING]
@@ -111,4 +111,4 @@ Webapp (`react-single-page-app`) is created in step 1 of the tester track along 
 
 - **Tester track**: Live test the full flow — push Go changes, run `bash scripts/track-tester.sh`
 - **Tester component.yaml**: Update `resourceRef` placeholders with real values after first connection creation
-- **S2S + Tester tracks**: Automate the manual "Deploy" step — currently requires clicking Deploy in Choreo UI
+- ~~**S2S + Tester tracks**: Automate the manual "Deploy" step~~ — DONE: `api-redeployer.ts` calls `deployDeploymentTrack` mutation

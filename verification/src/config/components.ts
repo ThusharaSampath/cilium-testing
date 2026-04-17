@@ -91,9 +91,13 @@ export const components: ComponentDefinition[] = [
     name: "tester",
     displayName: "Tester Service",
     sourceDirectory: "tester",
-    networkVisibility: "Project",
+    networkVisibility: "Public",
     buildPreset: "Go",
-    note: "Requires manual configuration of ORG_SERVICE_URL, PUBLIC_SERVICE_URL, PROJECT_SERVICE_URL, WEBAPP_URL env vars in Choreo after creation",
+    connections: [
+      { name: "tester-to-org", targetServiceName: "org-service" },
+      { name: "tester-to-public", targetServiceName: "public-service" },
+      { name: "tester-to-project", targetServiceName: "project-service" },
+    ],
   },
   {
     name: "react-single-page-app",

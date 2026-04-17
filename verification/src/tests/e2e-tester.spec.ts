@@ -1,14 +1,14 @@
 import { test } from "@playwright/test";
 import { components } from "../config/components.js";
 import { createComponent } from "../helpers/component-creator.js";
-import { createConnection } from "../helpers/connection-creator.js";
+import { createConnections } from "../helpers/connection-creator.js";
 import { fetchExistingComponents } from "../helpers/component-fetcher.js";
+import { config } from "../config/env.js";
 
 const testerComponents = [
   "org-service",
   "public-service",
   "project-service",
-  "react-single-page-app",
   "tester",
 ];
 
@@ -29,31 +29,33 @@ test.describe.serial("E2E Tester Flow", () => {
       }
 
       console.log(`Creating component: ${component.name}`);
-      const result = await createComponent(page, component);
-
-      if (component.connections) {
-        for (const connection of component.connections) {
-          await createConnection(page, result.componentUrl, connection);
-        }
-      }
+      await createComponent(page, component);
     }
   });
 
-  test("Step 2: Next steps", async () => {
+  test("Step 2: Create tester connections", async ({ page }) => {
+    const tester = targetComponents.find((c) => c.name === "tester");
+    if (!tester?.connections?.length) {
+      console.log("No connections defined for tester — skipping.");
+      return;
+    }
+
+    const componentUrl = `${config.projectUrl}/components/${tester.name}`;
+    await createConnections(page, componentUrl, tester.connections);
+  });
+
+  test("Step 3: Next steps", async () => {
     console.log("\n╔══════════════════════════════════════════════════════════╗");
     console.log("║     TESTER SETUP COMPLETE - RUN THESE NEXT              ║");
     console.log("╠══════════════════════════════════════════════════════════╣");
     console.log("║                                                          ║");
     console.log("║  1. Wait for all component builds to succeed in Choreo   ║");
     console.log("║                                                          ║");
-    console.log("║  2. Collect endpoint URLs:                               ║");
-    console.log("║     npm run collect:urls                                 ║");
+    console.log("║  2. Deploy the tester component in Choreo console        ║");
+    console.log("║     (to pick up the new connections)                     ║");
     console.log("║                                                          ║");
-    console.log("║  3. Update tester env config and redeploy:               ║");
-    console.log("║     npm run update:config                                ║");
-    console.log("║                                                          ║");
-    console.log("║  4. Wait for tester to redeploy, then run full test:     ║");
-    console.log("║     npm run full-test                                    ║");
+    console.log("║  3. Run the tester test:                                 ║");
+    console.log("║     npm run test:api -- tester /test                     ║");
     console.log("║                                                          ║");
     console.log("╚══════════════════════════════════════════════════════════╝\n");
   });

@@ -8,7 +8,7 @@ const required = [
   "CHOREO_ORG_HANDLE",
   "CHOREI_ORG_UUID",
   "CHOREO_PROJECT_ID",
-  "CHOREO_PROJECT_NAME",
+  "CHOREO_PROJECT_HANDLER",
   "GITHUB_REPO_NAME",
   "GITHUB_BRANCH",
   "GOOGLE_ACCOUNT_NAME",
@@ -27,7 +27,7 @@ export const config = {
   orgHandle: process.env.CHOREO_ORG_HANDLE!,
   orgUuid: process.env.CHOREI_ORG_UUID!,
   projectId: process.env.CHOREO_PROJECT_ID!,
-  projectName: process.env.CHOREO_PROJECT_NAME!,
+  projectHandler: process.env.CHOREO_PROJECT_HANDLER!,
   githubRepo: process.env.GITHUB_REPO_NAME!,
   githubBranch: process.env.GITHUB_BRANCH!,
   googleAccountName: process.env.GOOGLE_ACCOUNT_NAME!,
@@ -36,7 +36,7 @@ export const config = {
   buildWaitMs: parseInt(process.env.BUILD_WAIT_MINUTES ?? "20") * 60 * 1000,
 
   get projectUrl() {
-    return `${this.consoleUrl}/organizations/${this.orgHandle}/projects/${this.projectName}`;
+    return `${this.consoleUrl}/organizations/${this.orgHandle}/projects/${this.projectHandler}`;
   },
 
   /** Choreo API base URL derived from console URL */

@@ -20,22 +20,9 @@ run_step "tester_poll_builds" "Step 2/7: Poll builds" \
 run_step "tester_connections" "Step 3/7: Create tester connections" \
   bash -c "cd '$VERIFY_ROOT' && npx playwright test --project=create-tester-connections"
 
-# After connections, user must click "Deploy" in the UI
-if ! check_step_done "tester_deploy"; then
-  echo ""
-  echo -e "${YELLOW}${BOLD}╔══════════════════════════════════════════════════════════╗${NC}"
-  echo -e "${YELLOW}${BOLD}║       DEPLOY TESTER                                      ║${NC}"
-  echo -e "${YELLOW}${BOLD}╠══════════════════════════════════════════════════════════╣${NC}"
-  echo -e "${YELLOW}║                                                          ║${NC}"
-  echo -e "${YELLOW}║  1. Go to Choreo console → tester component              ║${NC}"
-  echo -e "${YELLOW}║  2. Click \"Deploy\" to redeploy with the connections       ║${NC}"
-  echo -e "${YELLOW}║  3. Wait for deployment to succeed                       ║${NC}"
-  echo -e "${YELLOW}║                                                          ║${NC}"
-  echo -e "${YELLOW}${BOLD}╚══════════════════════════════════════════════════════════╝${NC}"
-
-  prompt_continue "Press Enter after deployment succeeds..."
-  mark_step_done "tester_deploy"
-fi
+# Step 4: Redeploy tester with connections
+run_step "tester_deploy" "Step 4/7: Redeploy tester" \
+  npx tsx src/helpers/api-redeployer.ts "tester"
 
 # Step 5: Wait for tester deployment to become ACTIVE
 run_step "tester_poll_deployment" "Step 5/7: Wait for deployment ACTIVE" \

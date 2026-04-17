@@ -28,20 +28,31 @@ type testResponse struct {
 }
 
 type serviceConfig struct {
-	name   string
-	envVar string
+	name         string
+	envVar       string // CHOREO_*_SERVICEURL
+	apiKeyEnvVar string // CHOREO_*_CHOREOAPIKEY
 }
 
 var services = map[string]serviceConfig{
-	"org":     {name: "org-service", envVar: "ORG_SERVICE_URL"},
-	"public":  {name: "public-service", envVar: "PUBLIC_SERVICE_URL"},
-	"project": {name: "project-service", envVar: "PROJECT_SERVICE_URL"},
-	"webapp":  {name: "webapp", envVar: "WEBAPP_URL"},
+	"org":     {name: "org-service", envVar: "CHOREO_TESTER_TO_ORG_SERVICEURL", apiKeyEnvVar: "CHOREO_TESTER_TO_ORG_CHOREOAPIKEY"},
+	"public":  {name: "public-service", envVar: "CHOREO_TESTER_TO_PUBLIC_SERVICEURL", apiKeyEnvVar: "CHOREO_TESTER_TO_PUBLIC_CHOREOAPIKEY"},
+	"project": {name: "project-service", envVar: "CHOREO_TESTER_TO_PROJECT_SERVICEURL", apiKeyEnvVar: "CHOREO_TESTER_TO_PROJECT_CHOREOAPIKEY"},
 }
 
-func callService(name, baseURL string) serviceResult {
+func callService(name, baseURL, apiKeyEnvVar string) serviceResult {
 	url := baseURL + "/test"
-	resp, err := http.Get(url)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return serviceResult{Name: name, Error: fmt.Sprintf("build request failed: %v", err)}
+	}
+
+	if apiKey := os.Getenv(apiKeyEnvVar); apiKey != "" {
+		req.Header.Add("Choreo-API-Key", apiKey)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
 	if err != nil {
 		return serviceResult{Name: name, Error: fmt.Sprintf("request failed: %v", err)}
 	}
@@ -55,33 +66,6 @@ func callService(name, baseURL string) serviceResult {
 	return serviceResult{Name: name, Status: resp.StatusCode, Response: json.RawMessage(body)}
 }
 
-func callWebApp(name, baseURL string) serviceResult {
-	resp, err := http.Get(baseURL)
-	if err != nil {
-		return serviceResult{Name: name, Error: fmt.Sprintf("request failed: %v", err)}
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return serviceResult{Name: name, Status: resp.StatusCode, Error: fmt.Sprintf("read body failed: %v", err)}
-	}
-
-	contentType := resp.Header.Get("Content-Type")
-	result := map[string]string{
-		"content_type": contentType,
-		"body_length":  fmt.Sprintf("%d", len(body)),
-	}
-	if resp.StatusCode == http.StatusOK {
-		result["status"] = "reachable"
-	} else {
-		result["status"] = "unhealthy"
-	}
-
-	raw, _ := json.Marshal(result)
-	return serviceResult{Name: name, Status: resp.StatusCode, Response: json.RawMessage(raw)}
-}
-
 func logRequest(r *http.Request) {
 	logger.Printf("[%s] %s %s | RemoteAddr: %s",
 		time.Now().UTC().Format(time.RFC3339),
@@ -89,7 +73,7 @@ func logRequest(r *http.Request) {
 	)
 }
 
-func handleSingle(svc serviceConfig, isWebApp bool) http.HandlerFunc {
+func handleSingle(svc serviceConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -101,13 +85,14 @@ func handleSingle(svc serviceConfig, isWebApp bool) http.HandlerFunc {
 		var result serviceResult
 		if url == "" {
 			result = serviceResult{Name: svc.name, Error: fmt.Sprintf("env %s not set", svc.envVar)}
-		} else if isWebApp {
-			result = callWebApp(svc.name, url)
 		} else {
-			result = callService(svc.name, url)
+			result = callService(svc.name, url, svc.apiKeyEnvVar)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
+		if result.Error != "" || result.Status < 200 || result.Status >= 300 {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 		json.NewEncoder(w).Encode(testResponse{
 			Service: serviceName,
 			Time:    time.Now().UTC().Format(time.RFC3339),
@@ -128,7 +113,7 @@ func handleAll(w http.ResponseWriter, r *http.Request) {
 		value serviceResult
 	}
 
-	keys := []string{"org", "public", "project", "webapp"}
+	keys := []string{"org", "public", "project"}
 	ch := make(chan indexedResult, len(keys))
 
 	for i, key := range keys {
@@ -138,11 +123,7 @@ func handleAll(w http.ResponseWriter, r *http.Request) {
 				ch <- indexedResult{idx, serviceResult{Name: svc.name, Error: fmt.Sprintf("env %s not set", svc.envVar)}}
 				return
 			}
-			if k == "webapp" {
-				ch <- indexedResult{idx, callWebApp(svc.name, url)}
-			} else {
-				ch <- indexedResult{idx, callService(svc.name, url)}
-			}
+			ch <- indexedResult{idx, callService(svc.name, url, svc.apiKeyEnvVar)}
 		}(i, key, services[key])
 	}
 
@@ -152,12 +133,26 @@ func handleAll(w http.ResponseWriter, r *http.Request) {
 		results[r.index] = r.value
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(testResponse{
+	resp := testResponse{
 		Service: serviceName,
 		Time:    time.Now().UTC().Format(time.RFC3339),
 		Results: results,
-	})
+	}
+
+	// Return 500 if any target failed (error or non-2xx status)
+	hasFailure := false
+	for _, res := range results {
+		if res.Error != "" || res.Status < 200 || res.Status >= 300 {
+			hasFailure = true
+			break
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if hasFailure {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	json.NewEncoder(w).Encode(resp)
 }
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -171,7 +166,7 @@ func main() {
 		port = "8080"
 	}
 
-	for _, key := range []string{"org", "public", "project", "webapp"} {
+	for _, key := range []string{"org", "public", "project"} {
 		svc := services[key]
 		url := os.Getenv(svc.envVar)
 		if url != "" {
@@ -182,10 +177,9 @@ func main() {
 	}
 
 	http.HandleFunc("/test", handleAll)
-	http.HandleFunc("/test/org", handleSingle(services["org"], false))
-	http.HandleFunc("/test/public", handleSingle(services["public"], false))
-	http.HandleFunc("/test/project", handleSingle(services["project"], false))
-	http.HandleFunc("/test/webapp", handleSingle(services["webapp"], true))
+	http.HandleFunc("/test/org", handleSingle(services["org"]))
+	http.HandleFunc("/test/public", handleSingle(services["public"]))
+	http.HandleFunc("/test/project", handleSingle(services["project"]))
 	http.HandleFunc("/health", handleHealth)
 
 	logger.Printf("%s listening on :%s", serviceName, port)

@@ -9,8 +9,7 @@
     "create:one": "npx playwright test --project=create-components -g",
     "create:connection": "npx playwright test --project=create-connections",
     "test:console": "npx playwright test --project=test-console",
-    "collect:urls": "npx playwright test --project=collect-urls",
-    "update:config": "npx playwright test --project=update-tester-config",
+    "create:tester-connections": "npx playwright test --project=create-tester-connections",
     "e2e:tester": "npx playwright test --project=e2e-tester",
     "e2e:s2s": "npx playwright test --project=e2e-s2s",
     "capture:token": "npx playwright test --project=capture-token",
@@ -24,7 +23,9 @@
     "create:api:tester": "npx tsx src/helpers/api-component-creator.ts tester",
     "create:api:s2s": "npx tsx src/helpers/api-component-creator.ts s2s",
     "poll:api": "npx tsx src/helpers/api-build-poller.ts",
-    "test:api": "npx tsx src/helpers/api-test-runner.ts"
+    "test:api": "npx tsx src/helpers/api-test-runner.ts",
+    "poll:deployment": "npx tsx src/helpers/api-deployment-poller.ts",
+    "test:webapp": "npx tsx src/helpers/api-webapp-tester.ts"
   },
   "keywords": [],
   "author": "",

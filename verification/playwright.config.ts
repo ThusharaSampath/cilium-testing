@@ -47,22 +47,15 @@ export default defineConfig({
       },
     },
     {
+      name: "create-tester-connections",
+      testMatch: "create-tester-connections.spec.ts",
+      use: {
+        storageState: authFile,
+      },
+    },
+    {
       name: "test-console",
       testMatch: "test-console.spec.ts",
-      use: {
-        storageState: authFile,
-      },
-    },
-    {
-      name: "collect-urls",
-      testMatch: "collect-urls.spec.ts",
-      use: {
-        storageState: authFile,
-      },
-    },
-    {
-      name: "update-tester-config",
-      testMatch: "update-tester-config.spec.ts",
       use: {
         storageState: authFile,
       },

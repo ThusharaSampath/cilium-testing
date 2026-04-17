@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: curl
-        image: curlimages/curl:latest
+        image: registry.access.redhat.com/ubi8/ubi:latest
         command: ["/bin/sh", "-c"]
         args:
         - |
@@ -27,6 +27,13 @@ spec:
               exit 1
             fi
           done
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -50,6 +57,13 @@ spec:
         image: nginx:1.14.2
         ports:
         - containerPort: 80
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
 ---
 apiVersion: v1
 kind: Service

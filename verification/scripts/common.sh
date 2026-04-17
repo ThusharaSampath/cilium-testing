@@ -112,6 +112,30 @@ run_step() {
   fi
 }
 
+# Run a step that continues on failure instead of exiting.
+# Appends to FAILURES array on error. Caller must declare: FAILURES=()
+# Usage: run_step_soft "step_name" "Description" command arg1 arg2 ...
+run_step_soft() {
+  local step_name="$1"
+  local description="$2"
+  shift 2
+
+  if check_step_done "$step_name"; then
+    log "$description — already done, skipping."
+    return 0
+  fi
+
+  step "$description"
+
+  if "$@"; then
+    mark_step_done "$step_name"
+    log "$description — done."
+  else
+    fail "$description — FAILED."
+    FAILURES+=("$description")
+  fi
+}
+
 # ── User prompts ─────────────────────────────────────────
 
 # Pause and wait for user to press Enter

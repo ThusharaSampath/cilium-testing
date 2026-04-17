@@ -1,6 +1,77 @@
 import { type Page } from "@playwright/test";
 import { type ConnectionDefinition } from "../config/components.js";
 import { handleGoogleReloginIfNeeded } from "./google-relogin.js";
+import { config } from "../config/env.js";
+import { loadToken } from "./token-loader.js";
+
+const CONNECTIONS_API_URL = "https://apis.choreo.dev/connections/v1.0/configurations/service-configs/connections";
+
+/**
+ * Fetches existing connections for a component via the REST API.
+ * Returns a Set of connection names that already exist.
+ */
+export async function fetchExistingConnections(
+  componentId: string
+): Promise<Set<string>> {
+  const token = loadToken();
+  const url = `${CONNECTIONS_API_URL}?projectId=${config.projectId}&componentId=${componentId}`;
+
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+      Origin: "https://console.choreo.dev",
+      Referer: "https://console.choreo.dev/",
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Connections API HTTP ${response.status}: ${text}`);
+  }
+
+  const connections: { name: string }[] = await response.json();
+  const names = new Set(connections.map((c) => c.name));
+  console.log(
+    `  Existing connections: ${names.size > 0 ? [...names].join(", ") : "(none)"}`
+  );
+  return names;
+}
+
+/**
+ * Resolves the componentId for a given component handler name via GraphQL.
+ */
+export async function getComponentId(componentHandler: string): Promise<string> {
+  const token = loadToken();
+
+  const response = await fetch(config.graphqlUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+      Origin: "https://console.choreo.dev",
+      Referer: "https://console.choreo.dev/",
+    },
+    body: JSON.stringify({
+      query: `query {
+        components(orgHandler: "${config.orgHandle}", projectId: "${config.projectId}") {
+          id
+          handler
+        }
+      }`,
+    }),
+  });
+
+  const json = await response.json();
+  const comp = (json.data?.components ?? []).find(
+    (c: any) => c.handler === componentHandler
+  );
+  if (!comp) {
+    throw new Error(`Component "${componentHandler}" not found`);
+  }
+  return comp.id;
+}
 
 /**
  * Creates a connection for a component in the Choreo UI.
@@ -27,13 +98,6 @@ export async function createConnection(
   await page.goto(`${componentUrl}/connections`);
   await page.waitForLoadState("networkidle");
   await handleGoogleReloginIfNeeded(page);
-
-  // Check if connection already exists (idempotency)
-  const existingConnection = page.getByText(connection.name, { exact: true });
-  if (await existingConnection.isVisible({ timeout: 3_000 }).catch(() => false)) {
-    console.log(`  Connection "${connection.name}" already exists — skipping.`);
-    return;
-  }
 
   // Step 2: Click "Service Connection" button
   await page
@@ -92,13 +156,6 @@ export async function createConnections(
   for (const connection of connections) {
     console.log(`\nCreating connection: ${connection.name}`);
     console.log(`  Target service: ${connection.targetServiceName}`);
-
-    // Check if connection already exists (idempotency)
-    const existingConnection = page.getByText(connection.name, { exact: true });
-    if (await existingConnection.isVisible({ timeout: 3_000 }).catch(() => false)) {
-      console.log(`  Connection "${connection.name}" already exists — skipping.`);
-      continue;
-    }
 
     // Click "Create" button on the connections page
     await page

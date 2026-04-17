@@ -12,7 +12,7 @@ source "$SCRIPT_DIR/common.sh"
 
 NAMESPACE="${NAMESPACE:-default}"
 POD_NAME="metadata-test-$(date +%s)"
-IMAGE="curlimages/curl:8.5.0"
+IMAGE="registry.access.redhat.com/ubi8/ubi:latest"
 METADATA_URL="http://169.254.169.254"
 TIMEOUT=10
 
@@ -30,10 +30,23 @@ echo ""
 
 # Create a temporary pod
 log "Creating test pod '$POD_NAME' in namespace '$NAMESPACE'..."
-kubectl run "$POD_NAME" -n "$NAMESPACE" --image="$IMAGE" --restart=Never --labels="user_app=true" -- sleep 300
+kubectl run "$POD_NAME" -n "$NAMESPACE" --image="$IMAGE" --restart=Never --labels="user_app=true" \
+  --overrides='{
+    "spec": {
+      "containers": [{
+        "name": "'"$POD_NAME"'",
+        "image": "'"$IMAGE"'",
+        "args": ["sleep", "300"],
+        "resources": {
+          "requests": {"cpu": "50m", "memory": "64Mi"},
+          "limits": {"cpu": "100m", "memory": "128Mi"}
+        }
+      }]
+    }
+  }'
 
 log "Waiting for pod to be ready..."
-kubectl wait --for=condition=Ready pod/"$POD_NAME" -n "$NAMESPACE" --timeout=60s
+kubectl wait --for=condition=Ready pod/"$POD_NAME" -n "$NAMESPACE" --timeout=120s
 echo ""
 
 # Attempt to reach the metadata endpoint

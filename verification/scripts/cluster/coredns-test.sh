@@ -2,7 +2,7 @@
 set -e
 
 # CoreDNS Connectivity Test
-# Spins up a temporary busybox pod and runs DNS resolution tests
+# Spins up a temporary pod and runs DNS resolution tests
 # to verify CoreDNS is functioning correctly in the cluster.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -10,7 +10,7 @@ source "$SCRIPT_DIR/common.sh"
 
 NAMESPACE="${NAMESPACE:-default}"
 POD_NAME="dns-test-$(date +%s)"
-IMAGE="busybox:1.36"
+IMAGE="registry.access.redhat.com/ubi8/ubi:latest"
 TIMEOUT=60
 
 cleanup() {
@@ -65,7 +65,20 @@ echo ""
 
 # --- Spin up debug pod ---
 log "Creating debug pod '$POD_NAME' in namespace '$NAMESPACE'..."
-kubectl run "$POD_NAME" -n "$NAMESPACE" --image="$IMAGE" --restart=Never -- sleep 300
+kubectl run "$POD_NAME" -n "$NAMESPACE" --image="$IMAGE" --restart=Never --labels="user_app=true" \
+  --overrides='{
+    "spec": {
+      "containers": [{
+        "name": "'"$POD_NAME"'",
+        "image": "'"$IMAGE"'",
+        "args": ["sleep", "300"],
+        "resources": {
+          "requests": {"cpu": "50m", "memory": "64Mi"},
+          "limits": {"cpu": "100m", "memory": "128Mi"}
+        }
+      }]
+    }
+  }'
 
 log "Waiting for pod to be ready..."
 kubectl wait --for=condition=Ready pod/"$POD_NAME" -n "$NAMESPACE" --timeout="${TIMEOUT}s"
@@ -81,7 +94,8 @@ run_dns_test() {
   TOTAL=$((TOTAL + 1))
 
   log "Test $TOTAL: $description ($domain)"
-  if OUTPUT=$(kubectl exec "$POD_NAME" -n "$NAMESPACE" -- nslookup "$domain" 2>&1); then
+  # getent hosts is used for DNS resolution check on UBI image
+  if OUTPUT=$(kubectl exec "$POD_NAME" -n "$NAMESPACE" -- getent hosts "$domain" 2>&1); then
     echo "$OUTPUT" | sed 's/^/  /'
     log "  -> PASSED"
     PASS=$((PASS + 1))

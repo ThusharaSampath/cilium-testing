@@ -7,7 +7,7 @@ This repository automates the verification of Cilium CNI compatibility on WSO2 C
 ## What This Repo Contains
 
 Important
-- to access OS cluster: use  `KUBECONFIG=kubeconfig && kubectl cmd`
+- to access OS cluster: use  `KUBECONFIG=kubeconfig.yaml && kubectl cmd`
 - to access DEV cluster: use  `HTTPS_PROXY=http://localhost:3129 && kubectl cmd`
 - If you create/update/delete any artifcat you need to first backup original artifact (goodname-time.yaml), update the readme to explain the file in short, backup new/updated artifcat.
 - If you do a task that can be automated and it worth doing a automation ask me to create a script for it 

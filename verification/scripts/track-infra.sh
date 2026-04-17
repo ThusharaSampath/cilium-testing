@@ -13,28 +13,30 @@ source "$CLUSTER_SCRIPTS/common.sh"
 # Verify cluster connectivity once before running tests
 verify_cluster
 
+FAILURES=()
+
 # Step 1: Cluster info
-run_step "infra_cluster_info" "Step 1/5: Cluster info" \
+run_step_soft "infra_cluster_info" "Step 1/6: Cluster info" \
   bash "$CLUSTER_SCRIPTS/cluster-info.sh"
 
 # Step 2: CoreDNS connectivity
-run_step "infra_coredns" "Step 2/5: CoreDNS connectivity" \
+run_step_soft "infra_coredns" "Step 2/6: CoreDNS connectivity" \
   bash "$CLUSTER_SCRIPTS/coredns-test.sh"
 
 # Step 3: Transparent encryption (WireGuard)
-run_step "infra_encryption" "Step 3/5: Transparent encryption" \
+run_step_soft "infra_encryption" "Step 3/6: Transparent encryption" \
   bash "$CLUSTER_SCRIPTS/transparent-encryption-test.sh"
 
 # Step 4: Hubble observability (CLI + Prometheus)
-run_step "infra_hubble" "Step 4/5: Hubble observability" \
+run_step_soft "infra_hubble" "Step 4/6: Hubble observability" \
   bash "$CLUSTER_SCRIPTS/hubble-observability-test.sh"
 
 # Step 5: Metadata endpoint blocking
-run_step "infra_metadata" "Step 5/6: Metadata endpoint blocking" \
+run_step_soft "infra_metadata" "Step 5/6: Metadata endpoint blocking" \
   bash "$CLUSTER_SCRIPTS/metadata-endpoint-test.sh"
 
 # Step 6: Cross-node communication (longest — ~5 min)
-run_step "infra_cross_node" "Step 6/6: Cross-node communication" \
+run_step_soft "infra_cross_node" "Step 6/6: Cross-node communication" \
   bash "$CLUSTER_SCRIPTS/cross-node-test.sh"
 
 # Optional: Gateway error monitor (~10 min)
@@ -43,7 +45,7 @@ if ! check_step_done "infra_gateway"; then
   echo -n "Run gateway error monitor? (~10 min) [y/N]: "
   read -r run_gateway
   if [ "$run_gateway" = "y" ] || [ "$run_gateway" = "Y" ]; then
-    run_step "infra_gateway" "Optional: Gateway error monitor" \
+    run_step_soft "infra_gateway" "Optional: Gateway error monitor" \
       bash "$CLUSTER_SCRIPTS/gateway-error-monitor.sh"
   else
     info "Skipping gateway error monitor."
@@ -51,4 +53,18 @@ if ! check_step_done "infra_gateway"; then
   fi
 fi
 
-banner "Track 3: Infrastructure Tests — COMPLETE"
+# --- Summary ---
+echo ""
+if [ ${#FAILURES[@]} -eq 0 ]; then
+  banner "Track 3: Infrastructure Tests — COMPLETE"
+else
+  echo -e "${RED}${BOLD}╔══════════════════════════════════════════════════════════╗${NC}"
+  echo -e "${RED}${BOLD}║       Track 3: Infrastructure Tests — FAILURES           ║${NC}"
+  echo -e "${RED}${BOLD}╠══════════════════════════════════════════════════════════╣${NC}"
+  for f in "${FAILURES[@]}"; do
+    echo -e "${RED}║  ✗ ${f}${NC}"
+  done
+  echo -e "${RED}${BOLD}╚══════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+  exit 1
+fi

@@ -76,15 +76,12 @@ export async function getComponentId(componentHandler: string): Promise<string> 
 /**
  * Creates a connection for a component in the Choreo UI.
  *
- * Flow (from Playwright codegen recording, April 2026):
+ * Flow:
  * 1. Navigate to the component's Connections page
- * 2. Click "Service Connection" button
+ * 2. Click "Service Connection" button (or "Create" -> "Service" if connections exist)
  * 3. Search for target service and select it
  * 4. Fill in the connection name
  * 5. Click "Create"
- *
- * @param componentUrl - The base URL of the component
- *                       (e.g., .../components/auto-generated-slug)
  */
 export async function createConnection(
   page: Page,
@@ -99,14 +96,30 @@ export async function createConnection(
   await page.waitForLoadState("networkidle");
   await handleGoogleReloginIfNeeded(page);
 
-  // Step 2: Click "Service Connection" button
-  await page
-    .getByRole("button", { name: /Service Connection/i })
-    .click({ timeout: 15_000 });
+  // Step 2: Click "Service Connection" button or "Create" button
+  const serviceCardBtn = page.locator('[data-cyid="service-card-button"]');
+  // Use exact: true to avoid matching "GenAI Connection GenAI Create"
+  const createBtn = page.getByRole("button", { name: "Create", exact: true });
+
+  // Wait for either the empty state card or the list state create button
+  await Promise.race([
+    serviceCardBtn.waitFor({ state: "visible", timeout: 5000 }).catch(() => {}),
+    createBtn.waitFor({ state: "visible", timeout: 5000 }).catch(() => {}),
+  ]);
+
+  if (await serviceCardBtn.isVisible()) {
+    await serviceCardBtn.click({ timeout: 25_000 });
+  } else {
+    await createBtn.click({ timeout: 25_000 });
+    // Select "Service" resource type
+    await page
+      .getByTestId("resource-type-service")
+      .click({ timeout: 25_000 });
+  }
 
   // Step 3: Search for the target service and click it
   const searchInput = page.getByRole("textbox", { name: "Search resources" });
-  await searchInput.waitFor({ state: "visible", timeout: 15_000 });
+  await searchInput.waitFor({ state: "visible", timeout: 25_000 });
   await searchInput.fill(connection.targetServiceName);
   await page.waitForTimeout(2000);
 
@@ -114,17 +127,17 @@ export async function createConnection(
   await page
     .getByRole("button", { name: new RegExp(connection.targetServiceName, "i") })
     .first()
-    .click({ timeout: 15_000 });
+    .click({ timeout: 25_000 });
 
   // Step 4: Fill in the connection name
   const nameInput = page.getByRole("textbox", { name: "Name" });
-  await nameInput.waitFor({ state: "visible", timeout: 15_000 });
+  await nameInput.waitFor({ state: "visible", timeout: 25_000 });
   await nameInput.fill(connection.name);
 
   // Step 5: Click "Create" to finalize the connection
   await page
-    .getByRole("button", { name: "Create" })
-    .click({ timeout: 15_000 });
+    .getByRole("button", { name: "Create", exact: true })
+    .click({ timeout: 25_000 });
 
   // Wait for navigation away from the creation form
   await page.waitForLoadState("networkidle");
@@ -157,36 +170,47 @@ export async function createConnections(
     console.log(`\nCreating connection: ${connection.name}`);
     console.log(`  Target service: ${connection.targetServiceName}`);
 
-    // Click "Create" button on the connections page
-    await page
-      .getByRole("button", { name: "Create" })
-      .click({ timeout: 15_000 });
+    // Click "Create" button or "Service" card
+    const serviceCardBtn = page.locator('[data-cyid="service-card-button"]');
+    // Use exact: true to avoid matching "GenAI Connection GenAI Create"
+    const createBtn = page.getByRole("button", { name: "Create", exact: true });
 
-    // Select "Service" resource type
-    await page
-      .getByTestId("resource-type-service")
-      .click({ timeout: 15_000 });
+    // Wait for either the empty state card or the list state create button
+    await Promise.race([
+      serviceCardBtn.waitFor({ state: "visible", timeout: 5000 }).catch(() => {}),
+      createBtn.waitFor({ state: "visible", timeout: 5000 }).catch(() => {}),
+    ]);
+
+    if (await serviceCardBtn.isVisible()) {
+      await serviceCardBtn.click({ timeout: 25_000 });
+    } else {
+      await createBtn.click({ timeout: 25_000 });
+      // Select "Service" resource type
+      await page
+        .getByTestId("resource-type-service")
+        .click({ timeout: 25_000 });
+    }
 
     // Search for the target service and click it
     const searchInput = page.getByRole("textbox", { name: "Search resources" });
-    await searchInput.waitFor({ state: "visible", timeout: 15_000 });
+    await searchInput.waitFor({ state: "visible", timeout: 25_000 });
     await searchInput.fill(connection.targetServiceName);
     await page.waitForTimeout(2000);
 
     await page
       .getByRole("button", { name: new RegExp(connection.targetServiceName, "i") })
       .first()
-      .click({ timeout: 15_000 });
+      .click({ timeout: 25_000 });
 
     // Fill in the connection name
     const nameInput = page.getByRole("textbox", { name: "Name" });
-    await nameInput.waitFor({ state: "visible", timeout: 15_000 });
+    await nameInput.waitFor({ state: "visible", timeout: 25_000 });
     await nameInput.fill(connection.name);
 
     // Click "Create" to finalize
     await page
-      .getByRole("button", { name: "Create" })
-      .click({ timeout: 15_000 });
+      .getByRole("button", { name: "Create", exact: true })
+      .click({ timeout: 25_000 });
 
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
@@ -196,7 +220,7 @@ export async function createConnections(
     // Close the success dialog to return to connections page
     await page
       .getByTestId("sample-creation-dialog-closeBtn")
-      .click({ timeout: 15_000 });
+      .click({ timeout: 25_000 });
 
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(1000);

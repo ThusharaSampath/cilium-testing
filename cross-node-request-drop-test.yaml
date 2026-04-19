@@ -29,11 +29,11 @@ spec:
           done
         resources:
           requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
             cpu: 50m
             memory: 64Mi
-          limits:
-            cpu: 100m
-            memory: 128Mi
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -50,20 +50,20 @@ spec:
         app: request-drop-test-server
         server: request-drop-test
       annotations:
-        policy.cilium.io/proxy-visibility: "<Egress/53/UDP/DNS>,<Ingress/80/TCP/HTTP>"
+        policy.cilium.io/proxy-visibility: "<Egress/53/UDP/DNS>,<Ingress/8080/TCP/HTTP>"
     spec:
       containers:
       - name: nginx
-        image: nginx:1.14.2
+        image: quay.io/nginx/nginx-unprivileged:stable
         ports:
-        - containerPort: 80
+        - containerPort: 8080
         resources:
           requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
             cpu: 50m
             memory: 64Mi
-          limits:
-            cpu: 100m
-            memory: 128Mi
 ---
 apiVersion: v1
 kind: Service
@@ -76,5 +76,5 @@ spec:
   ports:
     - protocol: TCP
       port: 80
-      targetPort: 80
+      targetPort: 8080
   type: ClusterIP

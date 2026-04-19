@@ -30,7 +30,7 @@ sleep 2
 
 # Apply the test manifest
 log "Applying cross-node test manifest to namespace '$NAMESPACE'..."
-kubectl apply -f "$YAML_FILE" -n "$NAMESPACE"
+kubectl apply -f "$YAML_FILE" -n "$NAMESPACE" --validate=false
 
 # Wait for server DaemonSet to roll out (client may crash-loop initially — that's expected)
 log "Waiting for server DaemonSet to be ready..."

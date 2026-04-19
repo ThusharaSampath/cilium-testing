@@ -24,7 +24,7 @@ export async function handleGoogleReloginIfNeeded(
   const accountLink = page.getByRole("link", {
     name: new RegExp(config.googleAccountName, "i"),
   });
-  await accountLink.waitFor({ state: "visible", timeout: 15_000 });
+  await accountLink.waitFor({ state: "visible", timeout: 25_000 });
   await accountLink.click();
 
   // Wait for redirect back to Choreo

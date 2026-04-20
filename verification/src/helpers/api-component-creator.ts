@@ -134,8 +134,6 @@ async function createComponent(
     comp.componentType === "buildpackService"
       ? buildServiceMutation(comp, repoUrl, branch)
       : buildWebAppMutation(comp, repoUrl, branch);
-  
-  console.log(query)
 
   const response = await fetch(GRAPHQL_URL, {
     method: "POST",

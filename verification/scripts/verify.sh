@@ -32,6 +32,9 @@ case "$choice" in
     # Infra first — validates cluster foundation
     bash "$SCRIPT_DIR/track-infra.sh"
 
+    # Prereq check before UI tracks
+    bash "$SCRIPT_DIR/prereq-check.sh"
+
     # UI tracks after infra passes
     check_auth
 
@@ -45,11 +48,13 @@ case "$choice" in
     banner "ALL TRACKS COMPLETE"
     ;;
   2)
+    bash "$SCRIPT_DIR/prereq-check.sh"
     check_auth
     info "Running tester track only."
     bash "$SCRIPT_DIR/track-tester.sh"
     ;;
   3)
+    bash "$SCRIPT_DIR/prereq-check.sh"
     check_auth
     info "Running S2S track only."
     bash "$SCRIPT_DIR/track-s2s.sh"

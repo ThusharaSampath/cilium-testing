@@ -6,6 +6,7 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 const required = [
   "CHOREO_CONSOLE_URL",
   "CHOREO_ORG_HANDLE",
+  "CHOREO_ORG_ID",
   "CHOREI_ORG_UUID",
   "CHOREO_PROJECT_ID",
   "CHOREO_PROJECT_HANDLER",
@@ -25,6 +26,7 @@ for (const key of required) {
 export const config = {
   consoleUrl: process.env.CHOREO_CONSOLE_URL!.replace(/\/+$/, ""),
   orgHandle: process.env.CHOREO_ORG_HANDLE!,
+  orgId: parseInt(process.env.CHOREO_ORG_ID!, 10),
   orgUuid: process.env.CHOREI_ORG_UUID!,
   projectId: process.env.CHOREO_PROJECT_ID!,
   projectHandler: process.env.CHOREO_PROJECT_HANDLER!,

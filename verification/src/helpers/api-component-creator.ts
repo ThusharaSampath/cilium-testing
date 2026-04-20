@@ -19,8 +19,6 @@ import { loadToken } from "./token-loader.js";
 const GRAPHQL_URL = "https://apis.choreo.dev/projects/1.0.0/graphql";
 const DELAY_BETWEEN_COMPONENTS_MS = 5_000;
 
-const ORG_ID = 83289;
-
 async function fetchExistingComponents(token: string): Promise<Set<string>> {
   const query = `query {
     components(orgHandler: "${config.orgHandle}", projectId: "${config.projectId}") {
@@ -56,7 +54,7 @@ function buildServiceMutation(
           name: "${comp.name}",
           displayName: "${comp.displayName}",
           description: "",
-          orgId: ${ORG_ID},
+          orgId: ${config.orgId},
           orgHandler: "${config.orgHandle}",
           projectId: "${config.projectId}",
           labels: "",
@@ -96,7 +94,7 @@ function buildWebAppMutation(
           name: "${comp.name}",
           displayName: "${comp.displayName}",
           description: "",
-          orgId: ${ORG_ID},
+          orgId: ${config.orgId},
           orgHandler: "${config.orgHandle}",
           projectId: "${config.projectId}",
           labels: "",
@@ -136,6 +134,8 @@ async function createComponent(
     comp.componentType === "buildpackService"
       ? buildServiceMutation(comp, repoUrl, branch)
       : buildWebAppMutation(comp, repoUrl, branch);
+  
+  console.log(query)
 
   const response = await fetch(GRAPHQL_URL, {
     method: "POST",
@@ -148,6 +148,8 @@ async function createComponent(
     },
     body: JSON.stringify({ query }),
   });
+
+  console.log(response.headers)
 
   if (!response.ok) {
     const text = await response.text();

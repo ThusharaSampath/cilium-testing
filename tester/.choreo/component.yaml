@@ -14,8 +14,8 @@ endpoints:
 dependencies:
     connectionReferences:
     - name: tester-to-org
-      resourceRef: service:/thushara/org-service/v1/5c69c/ORGANIZATION
+      resourceRef: service:/bhvy/org-service/v1/5c69c/ORGANIZATION
     - name: tester-to-public
-      resourceRef: service:/thushara/public-service/v1/5c69c/PUBLIC
+      resourceRef: service:/bhvy/public-service/v1/5c69c/PUBLIC
     - name: tester-to-project
-      resourceRef: service:/thushara/project-service/v1/5c69c/PROJECT
+      resourceRef: service:/bhvy/project-service/v1/5c69c/PROJECT

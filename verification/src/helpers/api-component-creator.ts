@@ -149,7 +149,6 @@ async function createComponent(
     body: JSON.stringify({ query }),
   });
 
-  console.log(response.headers)
 
   if (!response.ok) {
     const text = await response.text();

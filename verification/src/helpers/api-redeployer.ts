@@ -39,7 +39,6 @@ async function graphql(
     body: JSON.stringify(body),
   });
 
-  console.log(response.headers)
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`GraphQL HTTP ${response.status}: ${text}`);
@@ -269,7 +268,6 @@ async function deploy(
       apiSettings,
     },
   };
-  console.log({mutation, variables})
 
   const data = await graphql(token, mutation, variables);
 

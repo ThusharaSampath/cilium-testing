@@ -44,7 +44,7 @@
       - `kubernetes.default.svc.cluster.local` → `172.30.0.1`
       - `dns-default.openshift-dns.svc.cluster.local` → `172.30.0.10`
       - `google.com` → resolved (both IPv4 and IPv6)
-  - [ ] Service-to-service scale to zero is working with both services having scale to zero enabled, and the second service is only exposed on the project scope
+  - [x] Service-to-service scale to zero is working with both services having scale to zero enabled, and the second service is only exposed on the project scope
     - Scale to zero is not visible in this pdp, by default ha
     - Apart from S2Z connections and calls are working
     - No keda pods running at all

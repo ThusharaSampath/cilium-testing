@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cilium-xns-test-a
+  labels:
+    user_app: "true"
+    cilium-xns-test: "true"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cilium-xns-test-b
+  labels:
+    user_app: "true"
+    cilium-xns-test: "true"
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: choreo-default-policies
+  namespace: cilium-xns-test-a
+spec:
+  endpointSelector: {}
+  ingress:
+  - fromEndpoints:
+    - {}
+  egress:
+  - toEndpoints:
+    - {}
+  - toCIDR:
+    - 0.0.0.0/0
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: choreo-default-policies
+  namespace: cilium-xns-test-b
+spec:
+  endpointSelector: {}
+  ingress:
+  - fromEndpoints:
+    - {}
+  egress:
+  - toEndpoints:
+    - {}
+  - toCIDR:
+    - 0.0.0.0/0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: xns-client
+  namespace: cilium-xns-test-a
+  labels:
+    app: xns-client
+spec:
+  containers:
+  - name: curl
+    image: registry.access.redhat.com/ubi8/ubi:latest
+    command: ["/bin/sh", "-c", "sleep infinity"]
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: xns-server
+  namespace: cilium-xns-test-b
+  labels:
+    app: xns-server
+spec:
+  containers:
+  - name: nginx
+    image: quay.io/nginx/nginx-unprivileged:stable
+    ports:
+    - containerPort: 8080
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: xns-server
+  namespace: cilium-xns-test-b
+spec:
+  selector:
+    app: xns-server
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+  type: ClusterIP

@@ -29,17 +29,11 @@ We use it here because Choreo components must be created through the web console
 - A project must already exist in the Choreo org
 
 ### For cluster scripts
-- Azure CLI (`az`) logged in
-- kubectl configured with AKS credentials:
-  ```bash
-  az aks get-credentials --resource-group choreo-dev-dataplane-002-aks-rg \
-    --name choreo-dev-dataplane-aks-cluster-002 --overwrite-existing
-  ```
-- SSH tunnel to the private AKS cluster running:
-  ```bash
-  sh ssh-tunnel-dev-dp.sh <username>
-  ```
-  This creates an HTTPS proxy on `localhost:3129` that kubectl uses to reach the private API server.
+- `kubectl` (and `oc` if targeting OpenShift) installed locally.
+- Your shell must already be configured to reach the target PDP cluster — for example
+  - `export KUBECONFIG=/path/to/kubeconfig`
+  - `oc login ...` for OpenShift
+- Verify with `kubectl cluster-info` before running the scripts.
 
 ## Setup
 
@@ -131,7 +125,7 @@ Available components:
 
 ### Phase 4: Cluster Verification Scripts
 
-All scripts require the SSH tunnel to be running (`sh ssh-tunnel-dev-dp.sh <username>`).
+All scripts require your shell to already have `kubectl` access to the target cluster (verify with `kubectl cluster-info`).
 
 ```bash
 # Cross-node communication (5 min monitoring)
@@ -206,13 +200,12 @@ verification/
 ### Playwright login session expired
 Re-run `npm run login` to get a fresh session.
 
-### kubectl: "no such host" error
-The AKS cluster is private. Make sure the SSH tunnel is running:
-```bash
-sh ssh-tunnel-dev-dp.sh <username>
-export HTTPS_PROXY=http://localhost:3129
-kubectl get nodes
-```
+### kubectl: "no such host" or connection-refused error
+Your shell isn't reaching the target cluster. Check:
+- `kubectl config current-context` matches the target cluster.
+- For private clusters reached via an SSH tunnel: ensure the tunnel is up and `HTTPS_PROXY` is exported.
+- For OpenShift: ensure `oc login ...` has been run.
+- Confirm with `kubectl cluster-info`.
 
 ### Playwright selectors fail after Choreo UI update
 The component creation script relies on UI element selectors that may change. Run Playwright's codegen tool to discover new selectors:

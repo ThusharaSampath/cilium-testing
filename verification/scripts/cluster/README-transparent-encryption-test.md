@@ -34,8 +34,7 @@ All checks are performed via `kubectl exec` into Cilium agent pods (which run as
 
 | Env Variable | Default | Description |
 |---|---|---|
-| `HTTPS_PROXY` | `http://localhost:3129` | Proxy for reaching the private AKS API server |
-| `CILIUM_NS` | `kube-system` | Namespace where Cilium pods run |
+| `CILIUM_NS` | `kube-system` | Namespace where Cilium pods run (override per cluster, e.g. `cilium` on OpenShift) |
 
 ## Usage
 
@@ -45,8 +44,8 @@ bash verification/scripts/cluster/transparent-encryption-test.sh
 
 ## Prerequisites
 
-- SSH tunnel running: `sh ssh-tunnel-dev-dp.sh <username>`
-- kubectl configured: `az aks get-credentials --resource-group choreo-dev-dataplane-002-aks-rg --name choreo-dev-dataplane-aks-cluster-002 --overwrite-existing`
+- `kubectl` available on PATH.
+- Your shell must already be configured to reach the target cluster (KUBECONFIG, proxy/SSH-tunnel, `oc login`, etc.). Verify with `kubectl cluster-info`.
 
 ## Expected Output (WireGuard)
 

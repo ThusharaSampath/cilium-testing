@@ -35,4 +35,11 @@ verification/.verification-state.json
 verification/.choreo-token.json
 verification/console.choreo.dev.har
 
-kubeconfig
+# Local kubeconfig (any name/extension)
+kubeconfig*
+
+# Local-only cluster common.sh (proxy/SSH-tunnel setup specific to your machine)
+verification/scripts/cluster/common.local.sh
+
+# Archive of files removed from tracking but kept on disk
+_archive/

@@ -1,7 +1,7 @@
 # OpenShift PDP (Private Data Plane) — Debugging Notes
 
-OpenShift 4.x cluster on AWS (`api.ocp-test.ostest.choreoapis.dev:6443`) used as a Choreo dataplane.
-Access: `KUBECONFIG=kubeconfig` (set `CLUSTER=OS` in `verification/.env`).
+Reference notes from validating Cilium on an OpenShift 4.x dataplane.
+Prerequisite: a shell with `kubectl`/`oc` configured to reach the target cluster.
 
 ---
 
@@ -89,8 +89,8 @@ These policies were **not managed by Helm/FluxCD** — they were manually applie
 
 **Fix:**
 ```bash
-KUBECONFIG=kubeconfig kubectl delete ciliumnetworkpolicy allow-dns-egress -n choreo-apim
-KUBECONFIG=kubeconfig kubectl delete ciliumnetworkpolicy allow-apiserver-egress -n choreo-apim
+kubectl delete ciliumnetworkpolicy allow-dns-egress -n choreo-apim
+kubectl delete ciliumnetworkpolicy allow-apiserver-egress -n choreo-apim
 ```
 
 After deletion, nginx → router egress started working immediately (`curl http://router-default-p1.choreo-apim.svc:9000/` returned 200).
@@ -140,19 +140,11 @@ The CronJob pod (using `amazon/aws-cli` image):
 bash verification/scripts/cluster/ecr-pull-secret-cronjob.sh
 
 # Manual trigger
-KUBECONFIG=kubeconfig kubectl create job --from=cronjob/ecr-pull-secret-refresh manual-refresh -n kube-system
+kubectl create job --from=cronjob/ecr-pull-secret-refresh manual-refresh -n kube-system
 
 # Check logs
-KUBECONFIG=kubeconfig kubectl logs -n kube-system -l job-name=ecr-pull-secret-refresh-init
+kubectl logs -n kube-system -l job-name=ecr-pull-secret-refresh-init
 ```
-
-### Multi-Cluster common.sh
-
-`verification/scripts/cluster/common.sh` now reads `CLUSTER` from `.env`:
-- `CLUSTER=DEV` → sets `HTTPS_PROXY=http://localhost:3129`, `CILIUM_NS=kube-system`
-- `CLUSTER=OS` → sets `KUBECONFIG=<repo>/kubeconfig`, unsets proxy, `CILIUM_NS=cilium`
-
-All cluster scripts automatically target the correct cluster.
 
 ---
 
@@ -160,25 +152,22 @@ All cluster scripts automatically target the correct cluster.
 
 ## Artifacts Applied to Cluster
 
+Active manifests/scripts kept in this directory (originals applied during onboarding):
+
 | File | Purpose |
 |---|---|
-| `hubble-metrics-service.yaml` | Headless Service in `cilium` namespace that exposes Hubble metrics (port 9965) from Cilium agent pods. Required for the `hubble` ServiceMonitor in `choreo-observability` to discover and scrape Hubble metrics. Missing from the OS cluster but present in the DEV cluster. |
+| `hubble-metrics-service.yaml` | Headless Service in `cilium` namespace that exposes Hubble metrics (port 9965) from Cilium agent pods. Required for the `hubble` ServiceMonitor in `choreo-observability` to discover and scrape Hubble metrics. |
 | `prometheus-operator-crb-fix.yaml` | New ClusterRoleBinding that binds ClusterRole `prometheus-operator` to SA `choreo-observability:prometheus-operator`. The Flux-managed CRB (`prometheus-operator`) incorrectly points to `openshift-monitoring` namespace and can't be patched (Flux reconciles it back). This new CRB is not managed by Flux so it persists. |
-| `os-cilium-config-backup-20260408-1240.yaml` | Backup of original `cilium-config` ConfigMap before adding `hubble-metrics` and `hubble-metrics-server` keys. |
-| `os-prometheus-operator-crb-backup-20260408-1015.yaml` | Backup of original `prometheus-operator` ClusterRoleBinding before fix attempt. |
-| `dev-cilium-config.yaml` | Reference copy of the DEV cluster's `cilium-config` ConfigMap for comparison. |
+| `dev-cilium-config.yaml` | Reference copy of the AKS dev cluster's `cilium-config` ConfigMap for comparison. |
 | `os-cilium-config.yaml` | Reference copy of the OS cluster's `cilium-config` ConfigMap for comparison. |
-| `os-allow-world-except-az-metadata-backup-20260410.yaml` | Backup of original `allow-world-except-az-metadata` CCNP before patching. Used `egress` allow-except pattern which was ineffective due to `choreo-default-policies` allowing `0.0.0.0/0`. |
-| `os-allow-world-except-az-metadata-patched-20260410.yaml` | Patched `allow-world-except-az-metadata` CCNP using `egressDeny` with `toCIDR: 169.254.169.254/32` (matching DEV cluster's `deny-az-metadata` pattern). Helm-managed — may be reconciled by Flux. |
-| `os-opensearch-security-config-backup-20260411.yaml` | Backup of `opensearch-security-config` secret before adding `fluent-bit` and `logging-api` users. |
-| `os-fluent-bit-daemonset-backup-20260411.yaml` | Backup of `fluent-bit` DaemonSet before SCC fix. |
+| `os-allow-world-except-az-metadata-patched-20260410.yaml` | Patched `allow-world-except-az-metadata` CCNP using `egressDeny` with `toCIDR: 169.254.169.254/32` (matching the AKS pattern). Helm-managed — may be reconciled by Flux. |
 | `os-opensearch-internal-users-patched-20260411.yaml` | Patched `internal_users.yml` with `fluent-bit` and `logging-api` users added (with bcrypt hashes). Must be applied to `opensearch-security-config` secret for persistence. |
 | `os-fluent-bit-scc-fix-20260411.sh` | Script to grant `privileged` SCC to `fluent-bit` SA and restart the DaemonSet. Fixes Permission denied errors reading `/var/log/containers/`. |
+| `kube-state-metrics-crb-fix.yaml` | ClusterRoleBinding fix for `kube-state-metrics` SA. |
+
+Original/backup copies of cluster manifests created during this onboarding live under `_archive/ospdp-backups/` (gitignored).
 
 ```bash
-# Connect to OS cluster
-export KUBECONFIG=kubeconfig
-
 # Check build pods
 kubectl get pods -n dp-builds-<uuid>
 
@@ -213,7 +202,6 @@ kubectl get jobs -n kube-system -l job-name=ecr-pull-secret-refresh-init
 
 | Aspect | OpenShift (OS) | AKS (DEV) |
 |---|---|---|
-| Access method | `KUBECONFIG=kubeconfig` | `HTTPS_PROXY=http://localhost:3129` |
 | Cilium namespace | `cilium` | `kube-system` |
 | APIM namespace | `choreo-apim` | `dev-choreo-apim` |
 | Container runtime | CRI-O | containerd |

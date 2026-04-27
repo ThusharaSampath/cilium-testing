@@ -7,10 +7,9 @@ This repository automates the verification of Cilium CNI compatibility on WSO2 C
 ## What This Repo Contains
 
 Important
-- to access OS cluster: use  `KUBECONFIG=kubeconfig.yaml && kubectl cmd`
-- to access DEV cluster: use  `HTTPS_PROXY=http://localhost:3129 && kubectl cmd`
-- If you create/update/delete any artifcat you need to first backup original artifact (goodname-time.yaml), update the readme to explain the file in short, backup new/updated artifcat.
-- If you do a task that can be automated and it worth doing a automation ask me to create a script for it 
+- The cluster scripts assume your shell already has `kubectl` configured to reach the target PDP cluster. How you achieve that (KUBECONFIG, proxy/SSH tunnel, `oc login`, etc.) is your responsibility.
+- If you create/update/delete a cluster artifact, back up the original first (`<good-name>-<timestamp>.yaml`), document the change briefly in the relevant README, and keep the new/updated artifact alongside the backup.
+- If you do a task that could be automated and it's worth doing, ask me to create a script for it.
 
 ### Test Service Source Code
 Go services deployed as Choreo components via the public GitHub repo `ThusharaSampath/cilium-testing`. Each service has a `.choreo/component.yaml` and `openapi.yaml` for Choreo auto-detection.
@@ -50,7 +49,7 @@ Three types of automation:
    - `track-s2s.sh` — Track 2: create → poll builds → [manual resourceRef step] → poll rebuild → test.
    - `common.sh` — Shared utilities: logging, auth check, JSON state file (`.verification-state.json`) for resumability.
 
-3. **Cluster shell scripts** (`verification/scripts/cluster/`) — kubectl-based checks run against the private AKS cluster via SSH tunnel proxy (`HTTPS_PROXY=http://localhost:3129`). All scripts source `common.sh` for shared config.
+3. **Cluster shell scripts** (`verification/scripts/cluster/`) — `kubectl`-based checks run against the target PDP cluster. The shell that invokes them must already be configured to reach the cluster (KUBECONFIG/proxy/`oc login`/etc.). All scripts source `common.sh` for shared logging and a `verify_cluster` connectivity check. Test manifests live under `verification/scripts/cluster/manifests/`.
 
 ### Reusable Helpers (`verification/src/helpers/`)
 - `token-capturer.ts` — Captures the Choreo STS token by intercepting `sts.choreo.dev/oauth2/token` response during page navigation. Caches to `.choreo-token.json` with expiry tracking.
@@ -66,8 +65,8 @@ Three types of automation:
 
 ## Architecture Notes
 
-- The AKS cluster is **private** — kubectl requires an SSH tunnel (`ssh-tunnel-dev-dp.sh`) that exposes an HTTPS proxy on `localhost:3129`.
-- `kubectl port-forward` does not work through the proxy (websocket limitation). Cluster scripts use `kubectl exec` instead to run commands inside pods.
+- Target PDP clusters are typically private. Set up cluster access (KUBECONFIG, SSH-tunnel + `HTTPS_PROXY`, `oc login`, etc.) in your shell before running the cluster scripts.
+- `kubectl port-forward` does not work over an HTTPS proxy (websocket limitation). When access is via a tunnel proxy, cluster scripts use `kubectl exec` instead to run commands inside pods.
 - Playwright runs in **headed mode** (visible browser). Google SSO login is done manually once; session is saved to `auth/storage-state.json`.
 - All services are Go, listen on port 8080, and use `schemaVersion: 1.2` component.yaml format.
 
@@ -154,7 +153,7 @@ npm run redeploy -- client
 # Invoke tester /test endpoint via Choreo test console
 npm run test:console
 
-# Cluster tests (SSH tunnel must be running)
+# Cluster tests (your shell must already have kubectl access to the target cluster)
 bash scripts/cluster/cross-node-test.sh
 bash scripts/cluster/hubble-observability-test.sh
 bash scripts/cluster/transparent-encryption-test.sh

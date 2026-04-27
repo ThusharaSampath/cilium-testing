@@ -11,7 +11,6 @@ This repository contains tools and services for verifying Cilium compatibility o
 | `project-service/` | Go service with Project-level network visibility |
 | `public-service/` | Go service with Public network visibility |
 | `service-to-service/` | Client + Server pair for project-level service-to-service communication |
-| `cross-node-request-drop-test.yaml` | K8s DaemonSet manifest for cross-node request reliability testing |
 | `tester/` | Central test service that calls org, public, project services and webapp |
 | `react-single-page-app/` | React webapp for reachability testing |
 | `verification/` | Playwright automation + cluster scripts for end-to-end verification |

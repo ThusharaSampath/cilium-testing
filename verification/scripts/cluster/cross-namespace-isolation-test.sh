@@ -14,8 +14,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-YAML_FILE="$REPO_ROOT/cross-namespace-isolation-test.yaml"
+YAML_FILE="$SCRIPT_DIR/manifests/cross-namespace-isolation-test.yaml"
 NS_A="cilium-xns-test-a"
 NS_B="cilium-xns-test-b"
 CURL_TIMEOUT="${CURL_TIMEOUT:-5}"

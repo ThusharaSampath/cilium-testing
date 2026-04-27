@@ -7,12 +7,6 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
-# Allow disabling proxy for clusters accessible via kubeconfig directly
-# Usage: HTTPS_PROXY=none bash cluster-info.sh
-if [ "$HTTPS_PROXY" = "none" ]; then
-  unset HTTPS_PROXY
-fi
-
 verify_cluster
 
 echo ""

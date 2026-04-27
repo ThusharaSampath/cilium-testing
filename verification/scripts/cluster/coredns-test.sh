@@ -22,18 +22,16 @@ trap cleanup EXIT
 verify_cluster
 
 # --- Check DNS pods health ---
-# OpenShift uses openshift-dns namespace with different labels; AKS uses kube-system with k8s-app=kube-dns
-if [ "$CLUSTER" = "OS" ]; then
-  DNS_NAMESPACE="openshift-dns"
-  DNS_LABEL="dns.operator.openshift.io/daemonset-dns=default"
-  DNS_SERVICE_DOMAIN="dns-default.openshift-dns.svc.cluster.local"
-  DNS_LABEL_NAME="OpenShift DNS"
-else
-  DNS_NAMESPACE="kube-system"
-  DNS_LABEL="k8s-app=kube-dns"
-  DNS_SERVICE_DOMAIN="kube-dns.kube-system.svc.cluster.local"
-  DNS_LABEL_NAME="CoreDNS"
-fi
+# Defaults assume vanilla Kubernetes (kube-system/k8s-app=kube-dns).
+# For OpenShift, override via env, e.g.:
+#   DNS_NAMESPACE=openshift-dns \
+#   DNS_LABEL=dns.operator.openshift.io/daemonset-dns=default \
+#   DNS_SERVICE_DOMAIN=dns-default.openshift-dns.svc.cluster.local \
+#   DNS_LABEL_NAME="OpenShift DNS" bash coredns-test.sh
+DNS_NAMESPACE="${DNS_NAMESPACE:-kube-system}"
+DNS_LABEL="${DNS_LABEL:-k8s-app=kube-dns}"
+DNS_SERVICE_DOMAIN="${DNS_SERVICE_DOMAIN:-kube-dns.kube-system.svc.cluster.local}"
+DNS_LABEL_NAME="${DNS_LABEL_NAME:-CoreDNS}"
 
 log "Checking $DNS_LABEL_NAME pod status in $DNS_NAMESPACE..."
 COREDNS_PODS=$(kubectl get pods -n "$DNS_NAMESPACE" -l "$DNS_LABEL" --no-headers 2>/dev/null)

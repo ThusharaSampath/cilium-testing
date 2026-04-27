@@ -15,7 +15,7 @@ Verifies that Cilium's Hubble observability layer is functioning correctly — b
 3. If flows are returned, the test passes. If empty, Hubble may not be running or no L7 traffic is flowing.
 
 **Why kubectl exec instead of local Hubble CLI?**
-The AKS cluster is private (accessible only via SSH tunnel). `kubectl port-forward` doesn't work through an HTTPS proxy (it requires a direct websocket connection), so we exec directly into the Cilium pod where the Hubble binary is already available.
+PDP clusters are typically private and reached over an HTTPS proxy. `kubectl port-forward` doesn't work through such a proxy (it requires a direct websocket connection), so we exec directly into the Cilium pod where the Hubble binary is already available.
 
 ### Test 2: Prometheus (hubble_http_requests_total)
 
@@ -28,14 +28,13 @@ The AKS cluster is private (accessible only via SSH tunnel). `kubectl port-forwa
 4. If at least one series is found, the test passes. Empty results means Hubble is not exporting metrics to Prometheus.
 
 **Why kubectl exec instead of port-forward?**
-Same reason — the HTTPS proxy tunnel doesn't support port-forwarding. By exec-ing into a pod that's already inside the cluster network, we can reach Prometheus directly via its ClusterIP service name.
+Same reason — when access is via an HTTPS proxy tunnel, port-forwarding doesn't work. By exec-ing into a pod that's already inside the cluster network, we can reach Prometheus directly via its ClusterIP service name.
 
 ## Configuration
 
 | Env Variable | Default | Description |
 |---|---|---|
-| `HTTPS_PROXY` | `http://localhost:3129` | Proxy for reaching the private AKS API server |
-| `CILIUM_NS` | `kube-system` | Namespace where Cilium pods run |
+| `CILIUM_NS` | `kube-system` | Namespace where Cilium pods run (override per cluster, e.g. `cilium` on OpenShift) |
 | `PROMETHEUS_NS` | `choreo-observability` | Namespace where Prometheus runs |
 | `PROMETHEUS_SVC` | `choreo-system-prometheus` | Prometheus service name |
 | `PROMETHEUS_PORT` | `9090` | Prometheus service port |
@@ -48,8 +47,8 @@ bash verification/scripts/cluster/hubble-observability-test.sh
 
 ## Prerequisites
 
-- SSH tunnel running: `sh ssh-tunnel-dev-dp.sh <username>`
-- kubectl configured: `az aks get-credentials --resource-group choreo-dev-dataplane-002-aks-rg --name choreo-dev-dataplane-aks-cluster-002 --overwrite-existing`
+- `kubectl` available on PATH.
+- Your shell must already be configured to reach the target cluster (KUBECONFIG, proxy/SSH-tunnel, `oc login`, etc.). Verify with `kubectl cluster-info`.
 
 ## Example Output
 

@@ -7,7 +7,8 @@ CLUSTER_SCRIPTS="$SCRIPT_DIR/cluster"
 
 banner "Track 3: Infrastructure Tests"
 
-# Source cluster common.sh to set up HTTPS_PROXY / KUBECONFIG
+# Source cluster common.sh for shared logging + verify_cluster.
+# Cluster access (KUBECONFIG, proxy, oc login, etc.) is the operator's responsibility.
 source "$CLUSTER_SCRIPTS/common.sh"
 
 # Verify cluster connectivity once before running tests

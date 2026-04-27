@@ -9,11 +9,8 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
-if [ "$CLUSTER" = "OS" ]; then
-  APIM_NS="${APIM_NS:-choreo-apim}"
-else
-  APIM_NS="${APIM_NS:-dev-choreo-apim}"
-fi
+# APIM namespace — override per cluster (e.g. choreo-apim, dev-choreo-apim)
+APIM_NS="${APIM_NS:-choreo-apim}"
 WATCH_DURATION="${WATCH_DURATION:-600}" # 10 minutes default
 CHECK_INTERVAL=10                       # poll every 10 seconds
 ROUTER_CONTAINER="choreo-connect-router"

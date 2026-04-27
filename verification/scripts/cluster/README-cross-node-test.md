@@ -7,9 +7,9 @@ Verifies that HTTP requests between pods on **different Kubernetes nodes** are n
 ## How It Works
 
 ### Setup Phase
-1. Sources `common.sh` to set up `HTTPS_PROXY` (for the SSH tunnel to the private AKS cluster) and verify kubectl connectivity.
+1. Sources `common.sh` and verifies kubectl connectivity to the cluster the current shell is targeting.
 2. Cleans up any leftover resources from previous runs.
-3. Applies `cross-node-request-drop-test.yaml` which creates:
+3. Applies `manifests/cross-node-request-drop-test.yaml` which creates:
    - **Server DaemonSet**: Runs an nginx pod on every node (port 80). Has a Cilium proxy-visibility annotation so traffic is observable via Hubble.
    - **Client DaemonSet**: Runs a curl pod on every node that continuously makes HTTP requests to the server service every 30 seconds. If a request returns anything other than HTTP 200, the client exits with code 1 (causing a container restart).
    - **ClusterIP Service**: Exposes server pods so client pods route through Kubernetes networking (potentially cross-node).
@@ -33,7 +33,6 @@ The live output shows:
 
 | Env Variable | Default | Description |
 |---|---|---|
-| `HTTPS_PROXY` | `http://localhost:3129` | Proxy for reaching the private AKS API server |
 | `NAMESPACE` | `default` | Kubernetes namespace for the test resources |
 | `MONITOR_DURATION` | `300` | Total monitoring time in seconds |
 | `SETTLE_TIME` | `120` | Seconds to wait before checking for stable restarts |
@@ -50,5 +49,5 @@ MONITOR_DURATION=600 SETTLE_TIME=180 bash verification/scripts/cluster/cross-nod
 
 ## Prerequisites
 
-- SSH tunnel running: `sh ssh-tunnel-dev-dp.sh <username>`
-- kubectl configured: `az aks get-credentials --resource-group choreo-dev-dataplane-002-aks-rg --name choreo-dev-dataplane-aks-cluster-002 --overwrite-existing`
+- `kubectl` available on PATH.
+- Your shell must already be configured to reach the target cluster (KUBECONFIG, proxy/SSH-tunnel, `oc login`, etc.). Verify with `kubectl cluster-info`.

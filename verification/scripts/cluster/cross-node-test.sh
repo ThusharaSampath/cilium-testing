@@ -9,8 +9,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-YAML_FILE="$REPO_ROOT/cross-node-request-drop-test.yaml"
+YAML_FILE="$SCRIPT_DIR/manifests/cross-node-request-drop-test.yaml"
 NAMESPACE="${NAMESPACE:-default}"
 MONITOR_DURATION="${MONITOR_DURATION:-300}" # 5 minutes default
 SETTLE_TIME="${SETTLE_TIME:-120}"           # 2 minutes settle window

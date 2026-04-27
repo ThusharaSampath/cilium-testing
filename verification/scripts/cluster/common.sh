@@ -1,34 +1,50 @@
 #!/bin/bash
-# Common configuration for cluster test scripts.
+# Common utilities for cluster test scripts.
 # Source this file from other scripts: source "$(dirname "$0")/common.sh"
 #
-# Supports two clusters controlled by CLUSTER in .env:
-#   CLUSTER=DEV  — AKS dev cluster, reached via SSH tunnel proxy (HTTPS_PROXY)
-#   CLUSTER=OS   — OpenShift cluster on AWS, reached via KUBECONFIG
+# Prerequisite: the shell running these scripts must already have kubectl
+# configured to reach the target PDP cluster. The script does NOT set up
+# KUBECONFIG, proxies, or SSH tunnels — that is the operator's responsibility.
+# Examples of valid setups:
+#   - export KUBECONFIG=/path/to/kubeconfig
+#   - export HTTPS_PROXY=http://localhost:<port>   (for clusters behind a tunnel)
+#   - oc login ...                                 (OpenShift)
+#
+# Per-cluster overrides (e.g. CILIUM_NS, DNS_NAMESPACE, APIM_NS) can be set
+# in verification/.env as plain KEY=VALUE lines — they are auto-loaded below.
 
-SCRIPT_DIR_COMMON="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="$SCRIPT_DIR_COMMON/../../.env"
-REPO_ROOT="$(cd "$SCRIPT_DIR_COMMON/../../.." && pwd)"
-
-# Load CLUSTER from .env (default: DEV)
-if [ -f "$ENV_FILE" ]; then
-  CLUSTER=$(grep '^CLUSTER=' "$ENV_FILE" | cut -d= -f2- | tr -d '[:space:]')
+# Auto-load verification/.env if present so cluster scripts pick up overrides
+# (CILIUM_NS, DNS_NAMESPACE, DNS_LABEL, APIM_NS, etc.) without manual export.
+_COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_VERIFY_ENV_FILE="$_COMMON_DIR/../../.env"
+if [ -f "$_VERIFY_ENV_FILE" ]; then
+  # Read line-by-line so we tolerate values with spaces/special chars.
+  # Only KEY=VALUE lines are picked up; comments and blanks are skipped.
+  # Values are exported only when the variable is not already set in the
+  # environment, so explicit shell exports always win.
+  while IFS= read -r _line || [ -n "$_line" ]; do
+    case "$_line" in
+      ''|\#*) continue ;;
+    esac
+    if [[ "$_line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+      _key="${BASH_REMATCH[1]}"
+      _val="${BASH_REMATCH[2]}"
+      # Strip surrounding single or double quotes from the value, if any.
+      if [[ "$_val" =~ ^\"(.*)\"$ ]] || [[ "$_val" =~ ^\'(.*)\'$ ]]; then
+        _val="${BASH_REMATCH[1]}"
+      fi
+      if [ -z "${!_key+x}" ]; then
+        export "$_key=$_val"
+      fi
+    fi
+  done < "$_VERIFY_ENV_FILE"
+  unset _line _key _val
 fi
-CLUSTER="${CLUSTER:-DEV}"
+unset _COMMON_DIR _VERIFY_ENV_FILE
 
-if [ "$CLUSTER" = "OS" ]; then
-  # OpenShift cluster — use kubeconfig, no proxy
-  export KUBECONFIG="${KUBECONFIG:-$REPO_ROOT/kubeconfig}"
-  unset HTTPS_PROXY
-  unset HTTP_PROXY
-  CILIUM_NS="${CILIUM_NS:-cilium}"
-  CLUSTER_LABEL="OpenShift (OS)"
-else
-  # AKS dev cluster — use SSH tunnel proxy
-  export HTTPS_PROXY="${HTTPS_PROXY:-http://localhost:3129}"
-  CILIUM_NS="${CILIUM_NS:-kube-system}"
-  CLUSTER_LABEL="AKS Dev (DEV)"
-fi
+# Cilium namespace — override via env or verification/.env if your cluster
+# installs Cilium elsewhere (e.g. CILIUM_NS=cilium on OpenShift).
+CILIUM_NS="${CILIUM_NS:-kube-system}"
 
 # Colors
 RED='\033[0;31m'
@@ -40,25 +56,18 @@ log()  { echo -e "${GREEN}[INFO]${NC} $*"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
 fail() { echo -e "${RED}[FAIL]${NC} $*"; }
 
-# Verify kubectl connectivity
+# Verify kubectl connectivity against whatever cluster the current shell targets.
 verify_cluster() {
-  log "Target cluster: $CLUSTER_LABEL"
-  if [ "$CLUSTER" = "OS" ]; then
-    log "Using KUBECONFIG=$KUBECONFIG"
-  else
-    log "Using HTTPS_PROXY=$HTTPS_PROXY"
-  fi
   log "Verifying cluster connectivity..."
   if ! kubectl cluster-info > /dev/null 2>&1; then
     fail "Cannot connect to cluster."
-    if [ "$CLUSTER" = "OS" ]; then
-      fail "Check that KUBECONFIG is correct: $KUBECONFIG"
-    else
-      fail "Make sure the SSH tunnel is running and HTTPS_PROXY is set correctly."
-      fail "  1. Run: sh ssh-tunnel-dev-dp.sh <username>"
-      fail "  2. Export: export HTTPS_PROXY=http://localhost:3129"
-    fi
+    fail "Ensure kubectl is configured to reach the target PDP cluster."
+    fail "  - Check 'kubectl config current-context'"
+    fail "  - For private clusters, ensure your tunnel/proxy is up and HTTPS_PROXY is exported"
+    fail "  - For OpenShift, ensure you're logged in (oc login ...)"
     exit 1
   fi
-  log "Connected to cluster."
+  local ctx
+  ctx=$(kubectl config current-context 2>/dev/null || echo "unknown")
+  log "Connected to cluster (context: $ctx)"
 }

@@ -146,6 +146,57 @@ prompt_continue() {
   read -r
 }
 
+# Optional component cleanup prompt. Call with the cleanup target ("tester",
+# "s2s", or "all") and a status: "ok" or "failed". On failure, prints a red
+# warning that cleanup forces a full re-run (state is preserved on skip).
+# Honors VERIFY_NONINTERACTIVE=1 (skips cleanup, no prompt).
+prompt_cleanup() {
+  local target="$1"
+  local status="${2:-ok}"
+
+  if [ "${VERIFY_NONINTERACTIVE:-0}" = "1" ]; then
+    info "Skipping cleanup prompt (VERIFY_NONINTERACTIVE=1)."
+    return 0
+  fi
+
+  echo ""
+  if [ "$status" = "failed" ]; then
+    echo -e "${RED}${BOLD}╔══════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${RED}${BOLD}║  WARNING — tests failed                                  ║${NC}"
+    echo -e "${RED}${BOLD}╠══════════════════════════════════════════════════════════╣${NC}"
+    echo -e "${RED}║  Verification state is preserved. Re-running             ${NC}"
+    echo -e "${RED}║  ${BOLD}bash scripts/verify.sh${NC}${RED} resumes from the failed step    ${NC}"
+    echo -e "${RED}║  and skips everything that already passed.               ${NC}"
+    echo -e "${RED}║                                                          ${NC}"
+    echo -e "${RED}║  Choosing cleanup below DELETES the components and       ${NC}"
+    echo -e "${RED}║  ${BOLD}clears state${NC}${RED} — the next run starts from scratch         ${NC}"
+    echo -e "${RED}║  (component creation, builds, connections, deploys).     ${NC}"
+    echo -e "${RED}${BOLD}╚══════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+  fi
+
+  echo -e "${YELLOW}${BOLD}Delete leftover components for target '${target}'? [y/N]:${NC} \c"
+  read -r answer
+  case "${answer:-N}" in
+    y|Y|yes|YES)
+      step "Cleanup: deleting components (target=${target})"
+      cd "$VERIFY_ROOT"
+      if npx tsx src/helpers/api-component-cleanup.ts "$target"; then
+        log "Cleanup complete."
+        clear_state
+        info "State cleared — the next verification run will start from scratch."
+      else
+        fail "Cleanup did not complete cleanly. Review output above."
+        info "State NOT cleared. Re-run cleanup or fix manually before retrying."
+        return 1
+      fi
+      ;;
+    *)
+      info "Cleanup skipped. State preserved — re-run resumes from the failed step."
+      ;;
+  esac
+}
+
 # ── Playwright runner ────────────────────────────────────
 
 # Run a Playwright test project from the verification root

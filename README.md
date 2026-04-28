@@ -1,26 +1,26 @@
-# tools-and-utils
+# Cilium Verification Toolbox
 
-This repository contains tools and services for verifying Cilium compatibility on WSO2 Choreo dataplanes. It includes test service source code and Playwright-based UI automation to create those services as Choreo components.
+This repository validates Cilium CNI compatibility on WSO2 Choreo dataplanes. It contains the test service source code, GraphQL/Playwright automation that drives Choreo, and `kubectl`-based cluster checks.
 
 ## Repository Structure
 
 | Directory | Description |
 |---|---|
-| `error-responder/` | Go service that always returns HTTP 500 (for HTTP retry testing) |
 | `org-service/` | Go service with Organization-level network visibility |
 | `project-service/` | Go service with Project-level network visibility |
 | `public-service/` | Go service with Public network visibility |
 | `service-to-service/` | Client + Server pair for project-level service-to-service communication |
 | `tester/` | Central test service that calls org, public, project services and webapp |
 | `react-single-page-app/` | React webapp for reachability testing |
-| `verification/` | Playwright automation + cluster scripts for end-to-end verification |
+| `verification/` | Automation + cluster scripts for end-to-end verification |
 
 ## Prerequisites
 
 - **Node.js** >= 18 and **npm**
 - **Google account** with access to the target Choreo organization
-- The GitHub repo `ThusharaSampath/cilium-testing` must be connected/authorized in the Choreo org
+- The GitHub repo containing the test services must be connected/authorized in the Choreo org (set via `GITHUB_REPO_NAME` in `.env`)
 - A **project** must already exist in the Choreo org (the automation creates components inside it)
+- For cluster scripts: a shell with `kubectl` already configured to reach the target PDP cluster
 
 ## Setup
 
@@ -36,73 +36,28 @@ This will:
 2. Download Chromium for Playwright
 3. Create a `.env` file from `.env.example` if one doesn't exist
 
-After setup, edit `verification/.env` with your Choreo org and project details:
-
-```
-CHOREO_CONSOLE_URL=https://consolev2.preview-dv.choreo.dev
-CHOREO_ORG_HANDLE=<your-org-handle>
-CHOREO_PROJECT_HANDLER=<your-project-name>
-GITHUB_REPO_NAME=ThusharaSampath/cilium-testing
-GITHUB_BRANCH=main
-```
+After setup, edit `verification/.env` with your Choreo org and project details. See `verification/README.md` for the full env-var reference.
 
 ## Usage
 
-All commands are run from the `verification/` directory.
-
-### 1. Login (one-time)
+The canonical entry point is `bash scripts/verify.sh`. It orchestrates three tracks (Infra → Tester → S2S → final report) with state-tracked resumability.
 
 ```bash
+cd verification
+
+# One-time Google SSO login (saves session to auth/storage-state.json)
 npm run login
+
+# Full verification — interactive menu for which tracks to run
+bash scripts/verify.sh
+
+# Reset persisted state and start over
+bash scripts/verify.sh --reset
 ```
 
-Opens a headed Chromium browser. Complete the Google SSO login manually. Once you land on the Choreo dashboard, the script saves your session to `auth/storage-state.json` so subsequent runs skip login. Re-run this if your session expires.
-
-### 2. E2E Flows (recommended)
-
-```bash
-# Create tester components (org, public, project, webapp, tester)
-# Prints next steps after creation
-npm run e2e:tester
-
-# Create service-to-service components (server + client with connection)
-# Prints manual steps after creation
-npm run e2e:s2s
-
-# Run full verification (tester + s2s client test consoles with combined report)
-npm run full-test
-```
-
-### 3. Individual Steps
-
-```bash
-# Create all components
-npm run create:all
-
-# Collect endpoint URLs from component overview pages
-npm run collect:urls
-
-# Update tester env config and redeploy
-npm run update:config
-
-# Invoke tester /test endpoint via test console
-npm run test:console
-```
-
-### Scripts Reference
-
-| Script | Description |
-|---|---|
-| `npm run e2e:tester` | E2E: Create tester flow components, prints next steps |
-| `npm run e2e:s2s` | E2E: Create s2s components + connection, prints manual steps |
-| `npm run full-test` | Run tester + s2s client test consoles with combined pass/fail report |
-| `npm run create:all` | Creates all test components |
-| `npm run collect:urls` | Extracts endpoint URLs from deployed components |
-| `npm run update:config` | Updates tester env vars and triggers redeploy |
-| `npm run test:console` | Invokes tester /test endpoint via Choreo test console |
+See `verification/README.md` and `verification/verification-steps.md` for what each track covers and how to run individual pieces.
 
 ## Notes
 
-- The `project-level-client` component requires a **server-connection** to be configured manually in Choreo after creation.
-- UI selectors in `verification/src/helpers/component-creator.ts` may need adjustment if the Choreo console UI changes. Run `npx playwright codegen <choreo-url>` to discover updated selectors.
 - Screenshots and videos are captured on failure to `verification/test-results/` for debugging.
+- If the Choreo console UI changes, run `npx playwright codegen <choreo-url>` to discover updated selectors for the connection-creator helper.

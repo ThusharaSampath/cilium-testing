@@ -33,13 +33,6 @@ export default defineConfig({
       // No storageState — fresh browser for login
     },
     {
-      name: "create-components",
-      testMatch: "create-components.spec.ts",
-      use: {
-        storageState: authFile,
-      },
-    },
-    {
       name: "create-connections",
       testMatch: "create-connections.spec.ts",
       use: {
@@ -61,30 +54,8 @@ export default defineConfig({
       },
     },
     {
-      name: "e2e-tester",
-      testMatch: "e2e-tester.spec.ts",
-      use: {
-        storageState: authFile,
-      },
-    },
-    {
-      name: "e2e-s2s",
-      testMatch: "e2e-s2s.spec.ts",
-      use: {
-        storageState: authFile,
-      },
-    },
-    {
       name: "capture-token",
       testMatch: "capture-token.spec.ts",
-      use: {
-        storageState: authFile,
-      },
-    },
-    {
-      name: "poll-builds",
-      testMatch: "poll-builds.spec.ts",
-      timeout: 25 * 60 * 1000, // 25 minutes (longer than BUILD_WAIT_MINUTES default)
       use: {
         storageState: authFile,
       },

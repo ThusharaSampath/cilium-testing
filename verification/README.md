@@ -1,198 +1,196 @@
 # Cilium Verification Automation
 
-Automated tests for verifying Cilium compatibility on WSO2 Choreo dataplanes. This directory contains two types of automation:
+Automation for verifying Cilium compatibility on WSO2 Choreo dataplanes. The suite has three tracks:
 
-1. **Playwright UI automation** — creates Choreo components via the browser
-2. **Cluster shell scripts** — runs kubectl-based checks directly on the AKS cluster
+1. **Infra** — `kubectl`-based checks (cross-node, Hubble, encryption, DNS, isolation, metadata block).
+2. **Tester** — creates `org-service`, `public-service`, `project-service`, `tester`, and the React webapp via Choreo's GraphQL API; wires connections; runs the tester `/test` aggregate via the Choreo data plane.
+3. **S2S** — creates `server` + `client` (project-scoped); wires the connection; runs the client `/hello` via the data plane.
 
-## How Playwright Works
-
-[Playwright](https://playwright.dev/) is a browser automation framework. It launches a real Chromium browser and controls it programmatically — clicking buttons, filling forms, navigating pages — just like a human would, but driven by TypeScript code.
-
-We use it here because Choreo components must be created through the web console (there's no CLI/API for this). Playwright automates the full UI flow:
-
-1. Opens the Choreo console in Chromium
-2. Navigates to the target project
-3. Clicks through the "Create a Service" workflow
-4. Selects the public GitHub repo, picks the directory, and submits
-
-**Headed mode**: The browser window is visible so you can watch what's happening. All our scripts run in headed mode for transparency.
-
-**Auth handling**: Google SSO can't be automated (Google blocks bot logins), so you complete the login manually once. Playwright saves the session cookies to `auth/storage-state.json` and reuses them for subsequent runs.
+Tracks are orchestrated by `bash scripts/verify.sh`, which persists progress in `.verification-state.json` so re-runs resume from the last failure. Component creation, build polling, deployment polling, redeploys, and end-point invocation use Choreo's GraphQL API directly. Playwright is only used for two things that require the UI: Google SSO login (manual) and creating service connections.
 
 ## Prerequisites
 
-### For Playwright (component creation)
+### Common
 - Node.js >= 18 and npm
-- Google account with access to the target Choreo organization
-- The public GitHub repo `ThusharaSampath/cilium-testing` containing the test service source code
-- A project must already exist in the Choreo org
+- A Choreo organization + project (created beforehand)
+- A GitHub repo connected to the org that contains the test service source code (this repo, by default `ThusharaSampath/cilium-testing`)
 
-### For cluster scripts
-- `kubectl` (and `oc` if targeting OpenShift) installed locally.
-- Your shell must already be configured to reach the target PDP cluster — for example
+### For the Tester / S2S tracks
+- Google account with access to the target Choreo org
+- After `npm run login`, `auth/storage-state.json` holds a reusable session
+
+### For the Infra track
+- `kubectl` (and `oc` if targeting OpenShift) on PATH
+- Your shell already configured to reach the target PDP cluster — for example any one of:
   - `export KUBECONFIG=/path/to/kubeconfig`
-  - `oc login ...` for OpenShift
-- Verify with `kubectl cluster-info` before running the scripts.
+  - `export HTTPS_PROXY=http://localhost:<port>` (for clusters reached via an SSH-tunnel HTTPS proxy)
+  - `oc login ...`
+- Verify with `kubectl cluster-info`
 
 ## Setup
 
 ```bash
 cd verification
 
-# Install dependencies and Chromium
+# Install dependencies + Chromium and bootstrap .env
 bash scripts/setup.sh
 ```
 
-Edit `.env` with your Choreo org and project:
+Edit `.env` — see `.env.example` for the full list of variables.
 
-```
-CHOREO_CONSOLE_URL=https://consolev2.preview-dv.choreo.dev
-CHOREO_ORG_HANDLE=<your-org-handle>
-CHOREO_PROJECT_HANDLER=<your-project-name>
-GITHUB_REPO_NAME=ThusharaSampath/cilium-testing
-GITHUB_BRANCH=main
-```
-
-## Running Tests
-
-### Phase 1: Login and Create Components
+## Running
 
 ```bash
-# Step 1: Login (one-time, opens browser for manual Google SSO)
+# One-time Google SSO login (headed browser, manual)
 npm run login
+
+# Full verification — interactive menu
+bash scripts/verify.sh
+
+# Reset persisted state and re-run from scratch
+bash scripts/verify.sh --reset
 ```
 
-### Phase 2: E2E Flows (recommended)
+`verify.sh` offers four options:
 
-Two E2E flows automate component creation and guide you through the remaining steps:
+| Option | Tracks | Notes |
+|---|---|---|
+| 1 | Infra → Tester → S2S → final UI report | Default. Stops at first hard failure; soft failures are summarized at the end. |
+| 2 | Tester only | Skips infra and S2S. |
+| 3 | S2S only | Skips infra and tester. |
+| 4 | Infra only | No Choreo console interaction needed. |
 
-**Tester Flow** — creates 5 components, then prints next steps:
+State lives in `.verification-state.json` — a step that completes is marked done and skipped on the next run.
+
+## Individual track entry points
+
 ```bash
-npm run e2e:tester
-# After builds succeed in Choreo, follow the printed instructions:
-#   1. npm run collect:urls
-#   2. npm run update:config
-#   3. npm run full-test
+bash scripts/track-infra.sh        # cluster checks (Track 1)
+bash scripts/track-tester.sh       # tester pipeline (Track 2)
+bash scripts/track-s2s.sh          # s2s pipeline (Track 3)
 ```
 
-**Service-to-Service Flow** — creates server + client with connection, then prints manual steps:
+## Individual helpers (for ad-hoc debugging)
+
+The bash tracks call these helpers directly via `npx tsx` — they're also runnable on their own:
+
 ```bash
-npm run e2e:s2s
-# After builds succeed in Choreo, follow the printed instructions:
-#   1. Copy connection resourceRef from Choreo console
-#   2. Update client's .choreo/component.yaml
-#   3. Commit, push, rebuild
-#   4. npm run full-test
+# Component creation (GraphQL)
+npm run create:api -- tester        # tester group only
+npm run create:api -- s2s           # s2s group only
+
+# Build / deployment polling
+npm run poll:api -- tester,org-service
+npm run poll:deployment -- tester
+
+# Redeploy after a config / connection change
+npm run redeploy -- tester
+
+# Run the tester /test endpoint via the data plane
+npm run test:api -- tester /test
+
+# Webapp reachability
+npm run test:webapp
+
+# Logs + metrics observability check for a component
+npm run test:obs -- tester
 ```
 
-**Full Test** — runs both tester and s2s client test consoles with combined report:
+Two Playwright-driven steps remain (UI is required):
+
 ```bash
+# Service connections (called automatically inside the tracks)
+npm run create:connection
+npm run create:tester-connections
+
+# Run the test console for a component (used by full-test report)
+npm run test:console
 npm run full-test
 ```
 
-### Phase 3: Individual Steps (alternative to E2E)
+STS tokens are auto-refreshed by `token-loader.ts` whenever an API helper runs — no manual `capture:token` step.
 
-```bash
-# Create all test components
-npm run create:all
+## Cluster scripts (Track 1 detail)
 
-# Or create one specific component
-bash scripts/create-one.sh error-responder
+All under `scripts/cluster/`. Each can be run standalone; `track-infra.sh` chains them.
 
-# Collect endpoint URLs from deployed components
-npm run collect:urls
-
-# Update tester env vars and redeploy
-npm run update:config
-
-# Run tester test console only
-npm run test:console
-```
-
-Available components:
-
-| Component | Source Directory | Purpose |
+| Script | What it tests | Duration |
 |---|---|---|
-| `error-responder` | `error-responder` | Returns HTTP 500 (for retry testing) |
-| `org-service` | `org-service` | Organization-level visibility |
-| `project-service` | `project-service` | Project-level visibility |
-| `public-service` | `public-service` | Public visibility |
-| `tester` | `tester` | Central test service calling all others |
-| `react-single-page-app` | `react-single-page-app` | React webapp for reachability testing |
-| `project-level-server` | `service-to-service/project-level/server` | Server for service-to-service test |
-| `project-level-client` | `service-to-service/project-level/client` | Client for service-to-service test |
+| `cluster-info.sh` | Prints Kubernetes / Cilium / runtime / platform info | < 5s |
+| `coredns-test.sh` | DNS pod health + cluster-internal/external resolution | < 30s |
+| `transparent-encryption-test.sh` | WireGuard active on every node with N-1 peers | < 30s |
+| `hubble-observability-test.sh` | Hubble L7 observation + `hubble_http_requests_total` Prometheus series | ~15s |
+| `metadata-endpoint-test.sh` | `169.254.169.254` is unreachable from user-app pods | < 30s |
+| `cross-namespace-isolation-test.sh` | Cross-namespace pod-IP and service-DNS calls are blocked | ~30s |
+| `cross-node-test.sh` | Cross-node HTTP requests aren't silently dropped | ~5 min |
+| `gateway-error-monitor.sh` | Watches the external gateway for 403s / "upstream not found" | ~10 min (optional) |
 
-### Phase 4: Cluster Verification Scripts
-
-All scripts require your shell to already have `kubectl` access to the target cluster (verify with `kubectl cluster-info`).
-
-```bash
-# Cross-node communication (5 min monitoring)
-bash scripts/cluster/cross-node-test.sh
-
-# Hubble observability (CLI + Prometheus)
-bash scripts/cluster/hubble-observability-test.sh
-
-# Transparent encryption (WireGuard)
-bash scripts/cluster/transparent-encryption-test.sh
-```
-
-| Script | What It Tests | Duration |
-|---|---|---|
-| `cross-node-test.sh` | HTTP requests between pods on different nodes aren't dropped | ~5 min |
-| `hubble-observability-test.sh` | Hubble L7 flow observation and Prometheus metrics export | ~15 sec |
-| `transparent-encryption-test.sh` | WireGuard encryption is active on all nodes | ~30 sec |
-
-Each script has a detailed README in `scripts/cluster/`:
+Per-script READMEs:
 - [Cross-Node Test](scripts/cluster/README-cross-node-test.md)
 - [Hubble Observability Test](scripts/cluster/README-hubble-observability-test.md)
 - [Transparent Encryption Test](scripts/cluster/README-transparent-encryption-test.md)
 
-## Directory Structure
+Override defaults per cluster via env vars (e.g. `CILIUM_NS=cilium` on OpenShift, `APIM_NS=dev-choreo-apim` on the AKS dev cluster). Test manifests live under `scripts/cluster/manifests/`.
+
+## Directory structure
 
 ```
 verification/
-  .env.example              # Config template (committed)
-  .env                      # Your config (gitignored)
-  playwright.config.ts      # Playwright settings
-  auth/
-    storage-state.json      # Saved browser session (gitignored)
+  .env.example                # Config template (committed)
+  .env                        # Your config (gitignored)
+  playwright.config.ts        # Playwright projects: auth-setup, capture-token,
+                              # create-connections, create-tester-connections,
+                              # test-console, full-test
+  auth/                       # Saved browser session (gitignored)
   src/
     config/
-      env.ts                # Loads and validates .env
-      components.ts         # 7 component definitions
+      env.ts                  # Loads and validates .env
+      api-components.ts       # GraphQL component definitions (current creation flow)
+      components.ts           # Connection definitions used by the connection specs
     helpers/
-      auth.ts               # Google SSO login helper
-      google-relogin.ts     # Auto re-login on session expiry
-      navigation.ts         # Choreo page navigation
-      component-creator.ts  # Core UI automation logic
-      connection-creator.ts # Service connection creation
-      url-collector.ts      # Extracts endpoint URLs from component pages
-      tester-config-updater.ts  # Updates tester env vars via deploy wizard
-      test-console-runner.ts    # Executes test console and returns response
-      build-poller.ts       # GraphQL build status polling (available for future use)
+      auth.ts                 # Manual SSO login helper
+      google-relogin.ts       # Auto re-login on session expiry
+      token-loader.ts         # STS token cache + auto-refresh
+      token-capturer.ts       # Captures token from sts.choreo.dev
+      api-component-creator.ts
+      api-build-poller.ts
+      api-deployment-poller.ts
+      api-redeployer.ts
+      api-test-runner.ts
+      api-webapp-tester.ts
+      api-observability-tester.ts
+      connection-creator.ts   # UI flow: create service connections
+      test-console-runner.ts  # UI flow: invoke a component's test console
     tests/
-      setup-auth.spec.ts        # Login test (headed, manual SSO)
-      create-components.spec.ts # Component creation tests
-      create-connections.spec.ts # Connection creation tests
-      collect-urls.spec.ts      # Collect endpoint URLs
-      update-tester-config.spec.ts # Update tester env config
-      test-console.spec.ts      # Invoke tester test console
-      e2e-tester.spec.ts        # E2E: create tester components + next steps
-      e2e-s2s.spec.ts           # E2E: create s2s components + manual steps
-      full-test.spec.ts         # Full test: tester + s2s with combined report
+      setup-auth.spec.ts            # One-time Google SSO login
+      capture-token.spec.ts         # STS token capture (auto-invoked by token-loader)
+      create-connections.spec.ts    # S2S connection creation
+      create-tester-connections.spec.ts
+      test-console.spec.ts          # Invoke tester test console
+      full-test.spec.ts             # Combined report: tester + s2s consoles
   scripts/
-    setup.sh                # Install dependencies
-    login.sh                # Browser login
-    create-all.sh           # Create all components
-    create-one.sh           # Create single component
+    setup.sh                  # Install dependencies + bootstrap .env
+    common.sh                 # Logging, state file, step runner
+    prereq-check.sh           # Validates .env + connection resourceRefs
+    verify.sh                 # Master orchestrator (interactive menu)
+    track-infra.sh            # Track 1
+    track-tester.sh           # Track 2
+    track-s2s.sh              # Track 3
     cluster/
-      common.sh             # Shared config (proxy, colors, cluster verify)
-      cross-node-test.sh    # Cross-node request drop test
-      hubble-observability-test.sh  # Hubble CLI + Prometheus check
-      transparent-encryption-test.sh  # WireGuard validation
-  test-results/             # Screenshots/videos on failure (gitignored)
+      common.sh               # Shared logging + verify_cluster
+      cluster-info.sh
+      coredns-test.sh
+      cross-namespace-isolation-test.sh
+      cross-node-test.sh
+      hubble-observability-test.sh
+      metadata-endpoint-test.sh
+      transparent-encryption-test.sh
+      gateway-error-monitor.sh
+      ecr-pull-secret-cronjob.sh   # OpenShift-only utility
+      manifests/
+        cross-namespace-isolation-test.yaml
+        cross-node-request-drop-test.yaml
+  test-results/               # Screenshots/videos on failure (gitignored)
 ```
 
 ## Troubleshooting
@@ -200,19 +198,19 @@ verification/
 ### Playwright login session expired
 Re-run `npm run login` to get a fresh session.
 
-### kubectl: "no such host" or connection-refused error
+### `kubectl: "no such host"` or connection-refused
 Your shell isn't reaching the target cluster. Check:
 - `kubectl config current-context` matches the target cluster.
 - For private clusters reached via an SSH tunnel: ensure the tunnel is up and `HTTPS_PROXY` is exported.
 - For OpenShift: ensure `oc login ...` has been run.
 - Confirm with `kubectl cluster-info`.
 
-### Playwright selectors fail after Choreo UI update
-The component creation script relies on UI element selectors that may change. Run Playwright's codegen tool to discover new selectors:
+### Playwright selectors fail after a Choreo UI update
+The connection-creator helper relies on UI selectors that may change. Re-record with:
 ```bash
-npx playwright codegen https://consolev2.preview-dv.choreo.dev
+npx playwright codegen "$CHOREO_CONSOLE_URL"
 ```
-Update selectors in `src/helpers/component-creator.ts`.
+Update selectors in `src/helpers/connection-creator.ts`.
 
-### Cluster script fails with "command not found: _encode"
-This is harmless noise from the shell profile. The scripts still work correctly — these warnings come from zsh plugins and don't affect execution.
+### `command not found: _encode` / `_decode` warnings
+Harmless noise from the shell profile. Scripts still execute correctly.

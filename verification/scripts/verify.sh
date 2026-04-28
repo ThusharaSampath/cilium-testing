@@ -24,13 +24,16 @@ echo -n "Choice [1]: "
 read -r choice
 choice="${choice:-1}"
 
+overall_status="ok"
+cleanup_target=""
+
 case "$choice" in
   1)
     info "Running all tracks."
     echo ""
 
     # Infra first — validates cluster foundation
-    bash "$SCRIPT_DIR/track-infra.sh"
+    bash "$SCRIPT_DIR/track-infra.sh" || overall_status="failed"
 
     # Prereq check before UI tracks
     bash "$SCRIPT_DIR/prereq-check.sh"
@@ -38,30 +41,38 @@ case "$choice" in
     # UI tracks after infra passes
     check_auth
 
-    bash "$SCRIPT_DIR/track-tester.sh"
-    bash "$SCRIPT_DIR/track-s2s.sh"
+    bash "$SCRIPT_DIR/track-tester.sh" || overall_status="failed"
+    bash "$SCRIPT_DIR/track-s2s.sh"    || overall_status="failed"
 
     # Run combined full-test for final report
     step "Final: Combined UI verification report"
     pw_run "full-test" || true
 
-    banner "ALL TRACKS COMPLETE"
+    cleanup_target="all"
+    if [ "$overall_status" = "ok" ]; then
+      banner "ALL TRACKS COMPLETE"
+    else
+      banner "ALL TRACKS FINISHED — WITH FAILURES"
+    fi
     ;;
   2)
     bash "$SCRIPT_DIR/prereq-check.sh"
     check_auth
     info "Running tester track only."
-    bash "$SCRIPT_DIR/track-tester.sh"
+    bash "$SCRIPT_DIR/track-tester.sh" || overall_status="failed"
+    cleanup_target="tester"
     ;;
   3)
     bash "$SCRIPT_DIR/prereq-check.sh"
     check_auth
     info "Running S2S track only."
-    bash "$SCRIPT_DIR/track-s2s.sh"
+    bash "$SCRIPT_DIR/track-s2s.sh" || overall_status="failed"
+    cleanup_target="s2s"
     ;;
   4)
     info "Running infra track only."
-    bash "$SCRIPT_DIR/track-infra.sh"
+    bash "$SCRIPT_DIR/track-infra.sh" || overall_status="failed"
+    # Infra track creates no components — no cleanup prompt.
     ;;
   *)
     fail "Invalid choice: $choice"
@@ -69,5 +80,15 @@ case "$choice" in
     ;;
 esac
 
+# Optional cleanup for tracks that create components
+if [ -n "$cleanup_target" ]; then
+  prompt_cleanup "$cleanup_target" "$overall_status" || true
+fi
+
 log "Verification finished."
 info "To re-run from scratch: bash scripts/verify.sh --reset"
+
+# Preserve non-zero exit so CI/automation can detect failure
+if [ "$overall_status" = "failed" ]; then
+  exit 1
+fi

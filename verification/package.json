@@ -21,7 +21,13 @@
     "poll:deployment": "npx tsx src/helpers/api-deployment-poller.ts",
     "redeploy": "npx tsx src/helpers/api-redeployer.ts",
     "test:webapp": "npx tsx src/helpers/api-webapp-tester.ts",
-    "test:obs": "npx tsx src/helpers/api-observability-tester.ts"
+    "test:obs": "npx tsx src/helpers/api-observability-tester.ts",
+    "create:connection:api": "npx tsx src/helpers/api-connection-creator.ts",
+    "create:connection:api:tester": "npx tsx src/helpers/api-connection-creator.ts tester",
+    "create:connection:api:s2s": "npx tsx src/helpers/api-connection-creator.ts s2s",
+    "cleanup:api": "npx tsx src/helpers/api-component-cleanup.ts",
+    "cleanup:api:tester": "npx tsx src/helpers/api-component-cleanup.ts tester",
+    "cleanup:api:s2s": "npx tsx src/helpers/api-component-cleanup.ts s2s"
   },
   "keywords": [],
   "author": "",

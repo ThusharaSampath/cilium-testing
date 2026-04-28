@@ -16,10 +16,9 @@ run_step "s2s_create" "Step 1/6: Create S2S components" \
 run_step "s2s_poll_builds" "Step 2/6: Poll builds" \
   npx tsx src/helpers/api-build-poller.ts "server,client"
 
-# Step 3: Create connection from client to server (via Playwright UI)
-# The connection name and resourceRef are deterministic, so no manual steps needed
+# Step 3: Create connection from client to server (via API)
 run_step "s2s_connection" "Step 3/6: Create connection" \
-  bash -c "cd '$VERIFY_ROOT' && npx playwright test --project=create-connections"
+  npx tsx src/helpers/api-connection-creator.ts s2s
 
 # Step 4: Redeploy client with connection
 run_step "s2s_deploy" "Step 4/6: Redeploy client" \

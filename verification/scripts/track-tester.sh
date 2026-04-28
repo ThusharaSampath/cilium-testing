@@ -18,7 +18,7 @@ run_step "tester_poll_builds" "Step 2/8: Poll builds" \
 
 # Step 3: Create 3 connections (tester → org, public, project)
 run_step "tester_connections" "Step 3/8: Create tester connections" \
-  bash -c "cd '$VERIFY_ROOT' && npx playwright test --project=create-tester-connections"
+  npx tsx src/helpers/api-connection-creator.ts tester
 
 # Step 4: Redeploy tester with connections
 run_step "tester_deploy" "Step 4/8: Redeploy tester" \

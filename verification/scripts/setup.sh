@@ -23,5 +23,5 @@ mkdir -p auth
 echo ""
 echo "Setup complete! Next steps:"
 echo "  1. Edit .env with your Choreo org/project details"
-echo "  2. Run: npm run login    (authenticate via Google SSO)"
-echo "  3. Run: npm run create:all  (create all components)"
+echo "  2. Run: npm run login           (authenticate via Google SSO)"
+echo "  3. Run: bash scripts/verify.sh  (full verification, interactive menu)"

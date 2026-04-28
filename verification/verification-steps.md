@@ -1,7 +1,7 @@
 # Verification Steps
 
 Verification is organized into three tracks, orchestrated by `bash scripts/verify.sh`.
-Cluster target is driven by `CLUSTER` in `.env` (`DEV` = AKS, `OS` = OpenShift).
+The cluster scripts run against whatever cluster the current shell's `kubectl` is targeting (KUBECONFIG, proxy, `oc login`, etc. — your responsibility).
 
 ---
 
@@ -37,7 +37,7 @@ Validates cluster foundation via kubectl against the selected cluster. No Choreo
 
 ## Track 2: Tester Track (`track-tester.sh`)
 
-Playwright-driven end-to-end flow. Creates five Choreo components (org-service, public-service, project-service, webapp, tester), waits for builds, collects endpoint URLs, updates tester config, and invokes the tester `/test` console.
+GraphQL-driven flow with a small Playwright step for connections. Creates five Choreo components (org-service, public-service, project-service, webapp, tester), polls builds, creates connections (Playwright UI), redeploys tester, polls until ACTIVE, then invokes the tester `/test` endpoint via the data plane. Webapp reachability and observability (logs + metrics) are checked at the end.
 
 Covers Cilium network policy enforcement via the tester's per-scope calls:
 
@@ -50,7 +50,7 @@ Covers Cilium network policy enforcement via the tester's per-scope calls:
 
 ## Track 3: Service-to-Service Track (`track-s2s.sh`)
 
-Playwright flow that creates a project-scoped server + client pair, wires them via a Choreo connection, and invokes the client `/hello` endpoint through the test console.
+GraphQL-driven flow with a small Playwright step for the connection. Creates a project-scoped server + client pair, polls builds, creates the connection (Playwright UI), redeploys the client, polls until ACTIVE, then invokes the client `/` endpoint via the data plane to confirm the s2s call succeeds.
 
 - [x] Project-level service-to-service communication.
 - [x] Service-to-service scale-to-zero with both sides enabled (second service project-scoped).
@@ -61,7 +61,7 @@ Playwright flow that creates a project-scoped server + client pair, wires them v
 ## Not Yet Automated
 
 - [ ] **HTTP retries**
-  - Deploy the `error-responder` component (always returns 500).
+  - Deploy a service that returns HTTP 500 deterministically.
   - Configure HTTP retry via endpoint config; verify retry requests in component logs.
 - [x] **Elevated 403s from the gateway** — covered by the optional gateway error monitor.
   - [Azure Log query](https://portal.azure.com#@da76d684-740f-4d94-8717-9d5fb21dd1f9/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2F520bc16b-6ff6-4d94-970e-1fa9c4708084%2Fresourcegroups%2Fchoreo-dev-log-analytics-rg%2Fproviders%2Fmicrosoft.operationalinsights%2Fworkspaces%2Fchoreo-log-crack-sole/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAA22OQUvEQAyF7%252F0VYU8zsCuC4q2nKlIU8aBnmXbiNquTlExGreyPd1ZZRPAdw%252FflvU7YAjHqrWybPeyEGF6IY%252FuKz5YxEbibMuC9xJ7fkE10aaBmD%252B8TKkJ39O9CQphChtU4iaJsRmHG0TYqxVBX%252FlsT%252FjX6S2iOb%252BagGZ92WdjVIVdsuvgTxTx3EhHaFs5PzyqMH4YcIczUR2jBJJsSb92%252FeqUeC0VfvSxqMCzwQAmvsXYHw3i4l5SC0ifCKIXN%252BQM0ELs%252F4BouJr%252F%252Baf0CE16cnjABAAA%253D/timespan/P7D)

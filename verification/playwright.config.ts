@@ -33,13 +33,6 @@ export default defineConfig({
       // No storageState — fresh browser for login
     },
     {
-      name: "create-connections",
-      testMatch: "create-connections.spec.ts",
-      use: {
-        storageState: authFile,
-      },
-    },
-    {
       name: "create-tester-connections",
       testMatch: "create-tester-connections.spec.ts",
       use: {

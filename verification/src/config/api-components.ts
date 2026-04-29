@@ -7,7 +7,6 @@
  *
  * Groups:
  *   - "tester" → org-service, public-service, project-service, react-single-page-app, tester
- *   - "s2s"    → project-level-server, project-level-client
  */
 
 export interface ApiComponentDefinition {
@@ -18,7 +17,7 @@ export interface ApiComponentDefinition {
   /** external = Public, org = Organization, project = Project */
   accessibility: "external" | "org" | "project";
   /** Which track this component belongs to */
-  group: "tester" | "s2s";
+  group: "tester";
 
   /**
    * Determines which GraphQL mutation to use:
@@ -49,7 +48,7 @@ function goService(
   name: string,
   buildContext: string,
   accessibility: "external" | "org" | "project",
-  group: "tester" | "s2s"
+  group: "tester"
 ): ApiComponentDefinition {
   return {
     name,
@@ -82,13 +81,9 @@ export const apiComponents: ApiComponentDefinition[] = [
     },
   },
   goService("tester", "tester", "project", "tester"),
-
-  // --- S2S track (2 components) ---
-  goService("server", "service-to-service/project-level/server", "project", "s2s"),
-  goService("client", "service-to-service/project-level/client", "external", "s2s"),
 ];
 
 /** Get components for a specific track */
-export function getComponentsByGroup(group: "tester" | "s2s"): ApiComponentDefinition[] {
+export function getComponentsByGroup(group: "tester"): ApiComponentDefinition[] {
   return apiComponents.filter((c) => c.group === group);
 }

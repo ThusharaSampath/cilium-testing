@@ -2,7 +2,7 @@
  * Creates Choreo service connections via REST + GraphQL APIs.
  *
  * Usage:
- *   npx tsx src/helpers/api-connection-creator.ts [tester|s2s|all]
+ *   npx tsx src/helpers/api-connection-creator.ts [tester|all]
  *
  * For each source component with declared connections in `components.ts`:
  *   1. GET existing connections — skip any whose name already exists.
@@ -85,6 +85,9 @@ async function getSourceComponent(
 async function getEnvironments(
   token: string
 ): Promise<{ id: string; name: string; isCritical: boolean }[]> {
+  // The connections API expects the environment *templateId*, not the
+  // project-scoped env instance `id`. Sending `id` returns HTTP 500
+  // ("Error while creating configuration group for connection ...").
   const data = await graphql(
     token,
     `query {
@@ -92,6 +95,7 @@ async function getEnvironments(
         id
         name
         critical
+        templateId
       }
     }`
   );
@@ -99,11 +103,16 @@ async function getEnvironments(
   if (envs.length === 0) {
     throw new Error("No environments returned for project");
   }
-  return envs.map((e: any) => ({
-    id: e.id,
-    name: e.name,
-    isCritical: !!e.critical,
-  }));
+  return envs.map((e: any) => {
+    if (!e.templateId) {
+      throw new Error(`Environment "${e.name}" has no templateId`);
+    }
+    return {
+      id: e.templateId,
+      name: e.name,
+      isCritical: !!e.critical,
+    };
+  });
 }
 
 async function fetchExistingConnectionNames(
@@ -247,11 +256,10 @@ interface SourceSpec {
   connections: ConnectionDefinition[];
 }
 
-function selectSources(group: "tester" | "s2s" | "all"): SourceSpec[] {
+function selectSources(group: "tester" | "all"): SourceSpec[] {
   const filtered = components.filter((c) => {
     if (!c.connections?.length) return false;
     if (group === "tester") return c.name === "tester";
-    if (group === "s2s") return c.name !== "tester";
     return true;
   });
   return filtered.map((c) => ({ name: c.name, connections: c.connections! }));
@@ -318,9 +326,9 @@ async function processSource(
 }
 
 async function main(): Promise<void> {
-  const arg = (process.argv[2] as "tester" | "s2s" | "all" | undefined) ?? "all";
-  if (arg !== "tester" && arg !== "s2s" && arg !== "all") {
-    console.error(`Unknown group "${arg}". Use tester|s2s|all.`);
+  const arg = (process.argv[2] as "tester" | "all" | undefined) ?? "all";
+  if (arg !== "tester" && arg !== "all") {
+    console.error(`Unknown group "${arg}". Use tester|all.`);
     process.exit(1);
   }
 

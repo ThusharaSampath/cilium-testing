@@ -10,10 +10,10 @@ fi
 #
 # Validates:
 #   1. Required .env vars are present.
-#   2. `resourceRef: service:/<project-handler>/...` lines in the component.yaml
-#      files under tester/ and service-to-service/project-level/client/ match
-#      CHOREO_PROJECT_HANDLER. A mismatch causes deployments to fail because
-#      Choreo resolves the connection target by project handler.
+#   2. `resourceRef: service:/<project-handler>/...` lines in the tester
+#      component.yaml match CHOREO_PROJECT_HANDLER. A mismatch causes
+#      deployments to fail because Choreo resolves the connection target
+#      by project handler.
 #
 # On mismatch: offers to auto-patch, then reminds the user to commit and push
 # to GITHUB_REPO_NAME (where Choreo pulls from) before proceeding.
@@ -77,7 +77,6 @@ log "All required .env vars present."
 TOOLBOX_ROOT="$(cd "$VERIFY_ROOT/.." && pwd)"
 COMPONENT_FILES=(
   "$TOOLBOX_ROOT/tester/.choreo/component.yaml"
-  "$TOOLBOX_ROOT/service-to-service/project-level/client/.choreo/component.yaml"
 )
 
 step "Checking resourceRef project handler matches CHOREO_PROJECT_HANDLER=$CHOREO_PROJECT_HANDLER"

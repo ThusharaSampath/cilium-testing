@@ -146,8 +146,8 @@ prompt_continue() {
   read -r
 }
 
-# Optional component cleanup prompt. Call with the cleanup target ("tester",
-# "s2s", or "all") and a status: "ok" or "failed". On failure, prints a red
+# Optional component cleanup prompt. Call with the cleanup target ("tester"
+# or "all") and a status: "ok" or "failed". On failure, prints a red
 # warning that cleanup forces a full re-run (state is preserved on skip).
 # Honors VERIFY_NONINTERACTIVE=1 (skips cleanup, no prompt).
 prompt_cleanup() {

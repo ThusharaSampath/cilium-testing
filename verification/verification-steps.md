@@ -48,12 +48,12 @@ Covers Cilium network policy enforcement via the tester's per-scope calls:
 
 ---
 
-## Track 3: Service-to-Service Track (`track-s2s.sh`)
+## Project-level Service-to-Service (covered by Track 2)
 
-GraphQL-driven flow with a small Playwright step for the connection. Creates a project-scoped server + client pair, polls builds, creates the connection (Playwright UI), redeploys the client, polls until ACTIVE, then invokes the client `/` endpoint via the data plane to confirm the s2s call succeeds.
+Project-level S2S is exercised inside Track 2: `tester` calls `project-service` (project-scoped) via a Choreo connection, and `project-service` is created with scale-to-zero on by default — so `tester /test/project` covers both the cross-component call and the cold-start path on the project-scoped target.
 
-- [x] Project-level service-to-service communication.
-- [x] Service-to-service scale-to-zero with both sides enabled (second service project-scoped).
+- [x] Project-level service-to-service communication (`tester → project-service`).
+- [x] Service-to-service scale-to-zero with the target side enabled.
   - Requires control-plane feature flag **and** KEDA stack in the cluster (see OpenShift onboarding guide).
 
 ---
@@ -73,7 +73,7 @@ GraphQL-driven flow with a small Playwright step for the connection. Creates a p
 ## Running the suite
 
 ```bash
-# Full orchestrated run (infra → prereq → tester → s2s → full-test)
+# Full orchestrated run (infra → prereq → tester → full-test)
 bash scripts/verify.sh
 
 # Infra track only (no Choreo console needed)

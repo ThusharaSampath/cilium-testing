@@ -51,14 +51,13 @@ bash scripts/verify.sh
 bash scripts/verify.sh --reset
 ```
 
-`verify.sh` offers four options:
+`verify.sh` offers three options:
 
 | Option | Tracks | Notes |
 |---|---|---|
-| 1 | Infra → Tester → S2S → final UI report | Default. Stops at first hard failure; soft failures are summarized at the end. |
-| 2 | Tester only | Skips infra and S2S. |
-| 3 | S2S only | Skips infra and tester. |
-| 4 | Infra only | No Choreo console interaction needed. |
+| 1 | Infra → Tester → final UI report | Default. Stops at first hard failure; soft failures are summarized at the end. |
+| 2 | Tester only | Skips infra. Project-level service-to-service is covered here via the `tester → project-service` connection. |
+| 3 | Infra only | No Choreo console interaction needed. |
 
 State lives in `.verification-state.json` — a step that completes is marked done and skipped on the next run.
 
@@ -66,8 +65,7 @@ State lives in `.verification-state.json` — a step that completes is marked do
 
 ```bash
 bash scripts/track-infra.sh        # cluster checks (Track 1)
-bash scripts/track-tester.sh       # tester pipeline (Track 2)
-bash scripts/track-s2s.sh          # s2s pipeline (Track 3)
+bash scripts/track-tester.sh       # tester pipeline (Track 2) — also covers project-level S2S
 ```
 
 ## Individual helpers (for ad-hoc debugging)
@@ -77,7 +75,9 @@ The bash tracks call these helpers directly via `npx tsx` — they're also runna
 ```bash
 # Component creation (GraphQL)
 npm run create:api -- tester        # tester group only
-npm run create:api -- s2s           # s2s group only
+
+# Connection creation (REST + GraphQL, idempotent)
+npm run create:connection:api -- tester
 
 # Build / deployment polling
 npm run poll:api -- tester,org-service
@@ -164,18 +164,16 @@ verification/
     tests/
       setup-auth.spec.ts            # One-time Google SSO login
       capture-token.spec.ts         # STS token capture (auto-invoked by token-loader)
-      create-connections.spec.ts    # S2S connection creation
-      create-tester-connections.spec.ts
+      create-tester-connections.spec.ts  # Legacy UI fallback for tester connections
       test-console.spec.ts          # Invoke tester test console
-      full-test.spec.ts             # Combined report: tester + s2s consoles
+      full-test.spec.ts             # Final tester report
   scripts/
     setup.sh                  # Install dependencies + bootstrap .env
     common.sh                 # Logging, state file, step runner
     prereq-check.sh           # Validates .env + connection resourceRefs
     verify.sh                 # Master orchestrator (interactive menu)
     track-infra.sh            # Track 1
-    track-tester.sh           # Track 2
-    track-s2s.sh              # Track 3
+    track-tester.sh           # Track 2 (also covers project-level S2S)
     cluster/
       common.sh               # Shared logging + verify_cluster
       cluster-info.sh

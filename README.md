@@ -55,8 +55,3 @@ bash scripts/verify.sh --reset
 ```
 
 See `verification/README.md` and `verification/verification-steps.md` for what each track covers and how to run individual pieces.
-
-## Notes
-
-- Screenshots and videos are captured on failure to `verification/test-results/` for debugging.
-- If the Choreo console UI changes and you fall back to the legacy Playwright connection helper, run `npx playwright codegen <choreo-url>` to discover updated selectors. (The primary connection path is now `api-connection-creator.ts`, which talks to Choreo's REST + GraphQL APIs and is unaffected by UI changes.)

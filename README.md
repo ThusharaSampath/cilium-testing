@@ -7,9 +7,8 @@ This repository validates Cilium CNI compatibility on WSO2 Choreo dataplanes. It
 | Directory | Description |
 |---|---|
 | `org-service/` | Go service with Organization-level network visibility |
-| `project-service/` | Go service with Project-level network visibility |
+| `project-service/` | Go service with Project-level network visibility (also serves as the project-level S2S target — `tester` calls it via a Choreo connection) |
 | `public-service/` | Go service with Public network visibility |
-| `service-to-service/` | Client + Server pair for project-level service-to-service communication |
 | `tester/` | Central test service that calls org, public, project services and webapp |
 | `react-single-page-app/` | React webapp for reachability testing |
 | `verification/` | Automation + cluster scripts for end-to-end verification |
@@ -40,7 +39,7 @@ After setup, edit `verification/.env` with your Choreo org and project details. 
 
 ## Usage
 
-The canonical entry point is `bash scripts/verify.sh`. It orchestrates three tracks (Infra → Tester → S2S → final report) with state-tracked resumability.
+The canonical entry point is `bash scripts/verify.sh`. It orchestrates two tracks (Infra → Tester → final report) with state-tracked resumability. Project-level service-to-service is exercised inside the Tester track via the `tester → project-service` connection.
 
 ```bash
 cd verification
@@ -60,4 +59,4 @@ See `verification/README.md` and `verification/verification-steps.md` for what e
 ## Notes
 
 - Screenshots and videos are captured on failure to `verification/test-results/` for debugging.
-- If the Choreo console UI changes, run `npx playwright codegen <choreo-url>` to discover updated selectors for the connection-creator helper.
+- If the Choreo console UI changes and you fall back to the legacy Playwright connection helper, run `npx playwright codegen <choreo-url>` to discover updated selectors. (The primary connection path is now `api-connection-creator.ts`, which talks to Choreo's REST + GraphQL APIs and is unaffected by UI changes.)

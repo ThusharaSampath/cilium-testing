@@ -1,29 +1,27 @@
 # Cilium Verification Automation
 
-Automation for verifying Cilium compatibility on WSO2 Choreo dataplanes. The suite has three tracks:
+Automation for verifying Cilium compatibility on WSO2 Choreo dataplanes. The suite has two tracks:
 
 1. **Infra** — `kubectl`-based checks (cross-node, Hubble, encryption, DNS, isolation, metadata block).
-2. **Tester** — creates `org-service`, `public-service`, `project-service`, `tester`, and the React webapp via Choreo's GraphQL API; wires connections; runs the tester `/test` aggregate via the Choreo data plane.
-3. **S2S** — creates `server` + `client` (project-scoped); wires the connection; runs the client `/hello` via the data plane.
+2. **Tester** — creates `org-service`, `public-service`, `project-service`, `tester`, and the React webapp via Choreo's GraphQL API; wires connections via the connections REST API; runs the tester `/test` aggregate via the Choreo data plane. Project-level service-to-service is exercised here too via the `tester → project-service` connection (project-service runs scale-to-zero by default, so this also covers cold-start behavior on a project-scoped target).
 
-Tracks are orchestrated by `bash scripts/verify.sh`, which persists progress in `.verification-state.json` so re-runs resume from the last failure. Component creation, build polling, deployment polling, redeploys, and end-point invocation use Choreo's GraphQL API directly. Playwright is only used for two things that require the UI: Google SSO login (manual) and creating service connections.
+Tracks are orchestrated by `bash scripts/verify.sh`, which persists progress in `.verification-state.json` so re-runs resume from the last failure. Component creation, connection creation, build polling, deployment polling, redeploys, and endpoint invocation all use Choreo's GraphQL/REST APIs directly. Playwright is only used for Google SSO login (manual, one-time) and the in-console test runner used by the final report.
 
 ## Prerequisites
 
 ### Common
 - Node.js >= 18 and npm
 - A Choreo organization + project (created beforehand)
-- A GitHub repo connected to the org that contains the test service source code (this repo, by default `ThusharaSampath/cilium-testing`)
+- A GitHub repo connected to the org that contains the test service source code (this repo, by default `ThusharaSampath/cilium-testing`), you can change the repo in .env file.
 
-### For the Tester / S2S tracks
+### For the Tester track
 - Google account with access to the target Choreo org
 - After `npm run login`, `auth/storage-state.json` holds a reusable session
 
 ### For the Infra track
-- `kubectl` (and `oc` if targeting OpenShift) on PATH
+- `kubectl` on PATH
 - Your shell already configured to reach the target PDP cluster — for example any one of:
   - `export KUBECONFIG=/path/to/kubeconfig`
-  - `export HTTPS_PROXY=http://localhost:<port>` (for clusters reached via an SSH-tunnel HTTPS proxy)
   - `oc login ...`
 - Verify with `kubectl cluster-info`
 
@@ -96,16 +94,15 @@ npm run test:webapp
 npm run test:obs -- tester
 ```
 
-Two Playwright-driven steps remain (UI is required):
+Playwright-driven steps that still need the UI:
 
 ```bash
-# Service connections (called automatically inside the tracks)
-npm run create:connection
-npm run create:tester-connections
-
-# Run the test console for a component (used by full-test report)
+# In-console test runner used by the final report
 npm run test:console
 npm run full-test
+
+# Legacy fallback for connection creation (the primary path is now create:connection:api)
+npm run create:tester-connections
 ```
 
 STS tokens are auto-refreshed by `token-loader.ts` whenever an API helper runs — no manual `capture:token` step.
@@ -139,27 +136,29 @@ verification/
   .env.example                # Config template (committed)
   .env                        # Your config (gitignored)
   playwright.config.ts        # Playwright projects: auth-setup, capture-token,
-                              # create-connections, create-tester-connections,
+                              # create-tester-connections (legacy fallback),
                               # test-console, full-test
   auth/                       # Saved browser session (gitignored)
   src/
     config/
       env.ts                  # Loads and validates .env
       api-components.ts       # GraphQL component definitions (current creation flow)
-      components.ts           # Connection definitions used by the connection specs
+      components.ts           # Connection definitions consumed by api-connection-creator
     helpers/
       auth.ts                 # Manual SSO login helper
       google-relogin.ts       # Auto re-login on session expiry
       token-loader.ts         # STS token cache + auto-refresh
       token-capturer.ts       # Captures token from sts.choreo.dev
       api-component-creator.ts
+      api-component-cleanup.ts
+      api-connection-creator.ts # Connection creation via REST + GraphQL (primary path)
       api-build-poller.ts
       api-deployment-poller.ts
       api-redeployer.ts
       api-test-runner.ts
       api-webapp-tester.ts
       api-observability-tester.ts
-      connection-creator.ts   # UI flow: create service connections
+      connection-creator.ts   # Legacy UI fallback for connection creation
       test-console-runner.ts  # UI flow: invoke a component's test console
     tests/
       setup-auth.spec.ts            # One-time Google SSO login
@@ -199,16 +198,4 @@ Re-run `npm run login` to get a fresh session.
 ### `kubectl: "no such host"` or connection-refused
 Your shell isn't reaching the target cluster. Check:
 - `kubectl config current-context` matches the target cluster.
-- For private clusters reached via an SSH tunnel: ensure the tunnel is up and `HTTPS_PROXY` is exported.
-- For OpenShift: ensure `oc login ...` has been run.
 - Confirm with `kubectl cluster-info`.
-
-### Playwright selectors fail after a Choreo UI update
-The connection-creator helper relies on UI selectors that may change. Re-record with:
-```bash
-npx playwright codegen "$CHOREO_CONSOLE_URL"
-```
-Update selectors in `src/helpers/connection-creator.ts`.
-
-### `command not found: _encode` / `_decode` warnings
-Harmless noise from the shell profile. Scripts still execute correctly.

@@ -2,7 +2,7 @@
  * Creates Choreo components via the GraphQL API instead of browser UI.
  *
  * Usage:
- *   npx tsx src/helpers/api-component-creator.ts [tester|s2s|all]
+ *   npx tsx src/helpers/api-component-creator.ts [tester|all]
  *
  * Uses the STS token from .choreo-token.json (captured via Playwright).
  * Idempotent — fetches existing components first and skips them.
@@ -172,13 +172,11 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function main() {
-  const group = process.argv[2] as "tester" | "s2s" | "all" | undefined;
+  const group = process.argv[2] as "tester" | "all" | undefined;
 
   let targets: ApiComponentDefinition[];
   if (group === "tester") {
     targets = getComponentsByGroup("tester");
-  } else if (group === "s2s") {
-    targets = getComponentsByGroup("s2s");
   } else {
     targets = apiComponents;
   }

@@ -2,7 +2,7 @@
  * Deletes leftover Choreo components in the configured project via GraphQL.
  *
  * Usage:
- *   npx tsx src/helpers/api-component-cleanup.ts [tester|s2s|all]
+ *   npx tsx src/helpers/api-component-cleanup.ts [tester|all]
  *
  * Choreo refuses to delete a component that is the TARGET of a connection
  * (e.g., `org-service` while `tester` still has a connection to it). To handle
@@ -164,15 +164,13 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const group = process.argv[2] as "tester" | "s2s" | "all" | undefined;
+  const group = process.argv[2] as "tester" | "all" | undefined;
 
   // Restrict the cleanup set to components this repo manages, unless "all".
   const knownNames = new Set(
     group === "tester"
       ? apiComponents.filter((c) => c.group === "tester").map((c) => c.name)
-      : group === "s2s"
-        ? apiComponents.filter((c) => c.group === "s2s").map((c) => c.name)
-        : apiComponents.map((c) => c.name)
+      : apiComponents.map((c) => c.name)
   );
 
   const token = loadToken();

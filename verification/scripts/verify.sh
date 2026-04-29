@@ -15,10 +15,9 @@ banner "Cilium Verification Toolbox"
 # Track selection
 echo "Select which tracks to run:"
 echo ""
-echo "  1) All tracks (Tester + S2S + Infra)"
+echo "  1) All tracks (Tester + Infra)"
 echo "  2) Tester track only"
-echo "  3) Service-to-Service track only"
-echo "  4) Infrastructure track only"
+echo "  3) Infrastructure track only"
 echo ""
 echo -n "Choice [1]: "
 read -r choice
@@ -42,13 +41,12 @@ case "$choice" in
     check_auth
 
     bash "$SCRIPT_DIR/track-tester.sh" || overall_status="failed"
-    bash "$SCRIPT_DIR/track-s2s.sh"    || overall_status="failed"
 
     # Run combined full-test for final report
     step "Final: Combined UI verification report"
     pw_run "full-test" || true
 
-    cleanup_target="all"
+    cleanup_target="tester"
     if [ "$overall_status" = "ok" ]; then
       banner "ALL TRACKS COMPLETE"
     else
@@ -63,13 +61,6 @@ case "$choice" in
     cleanup_target="tester"
     ;;
   3)
-    bash "$SCRIPT_DIR/prereq-check.sh"
-    check_auth
-    info "Running S2S track only."
-    bash "$SCRIPT_DIR/track-s2s.sh" || overall_status="failed"
-    cleanup_target="s2s"
-    ;;
-  4)
     info "Running infra track only."
     bash "$SCRIPT_DIR/track-infra.sh" || overall_status="failed"
     # Infra track creates no components — no cleanup prompt.

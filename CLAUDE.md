@@ -15,9 +15,8 @@ Important
 Go services deployed as Choreo components via the connected GitHub repo (`GITHUB_REPO_NAME` in `.env`). Each service has a `.choreo/component.yaml` and `openapi.yaml` for Choreo auto-detection.
 
 - `org-service/` — Organization-scoped service (network visibility: Organization).
-- `project-service/` — Project-scoped service (network visibility: Project).
+- `project-service/` — Project-scoped service (network visibility: Project). Doubles as the project-level service-to-service target — `tester` calls it via a Choreo connection.
 - `public-service/` — Publicly accessible service (network visibility: Public).
-- `service-to-service/project-level/server` and `client` — Pair that tests project-level service-to-service communication. The client calls the server's `/hello` endpoint via a Choreo connection.
 - `tester/` — Central service that calls org, public, project services and the webapp. Connection URLs come in as env vars declared in `.choreo/component.yaml` (auto-populated from Choreo connections).
 
   Endpoints:
@@ -33,10 +32,9 @@ Go services deployed as Choreo components via the connected GitHub repo (`GITHUB
 
 Three layers:
 
-1. **Bash orchestration** (`verification/scripts/`) — `verify.sh` is the canonical entry point with a 4-option menu (all / tester only / s2s only / infra only). Each track is a numbered, state-tracked sequence of steps written to `.verification-state.json` for resumability.
+1. **Bash orchestration** (`verification/scripts/`) — `verify.sh` is the canonical entry point with a 3-option menu (all / tester only / infra only). Each track is a numbered, state-tracked sequence of steps written to `.verification-state.json` for resumability.
    - `track-infra.sh` — kubectl-based cluster checks.
-   - `track-tester.sh` — tester pipeline (create → poll builds → create connections → redeploy → poll deployment → test → webapp → observability).
-   - `track-s2s.sh` — server/client pipeline (create → poll builds → create connection → redeploy → poll deployment → test).
+   - `track-tester.sh` — tester pipeline (create → poll builds → create connections → redeploy → poll deployment → test → webapp → observability). Also covers project-level service-to-service via the `tester → project-service` connection.
    - `prereq-check.sh` — validates `.env` and `resourceRef` lines in component.yamls match `CHOREO_PROJECT_HANDLER`.
    - `common.sh` — shared logging, auth check, JSON state file, step runner.
 
@@ -45,8 +43,8 @@ Three layers:
 3. **Playwright (UI)** — used only for things that require the UI:
    - `setup-auth.spec.ts` — manual Google SSO login (one-time, headed browser).
    - `capture-token.spec.ts` — captures the STS token (auto-invoked by `token-loader.ts`).
-   - `create-connections.spec.ts` / `create-tester-connections.spec.ts` — creates service connections (no GraphQL mutation available).
-   - `test-console.spec.ts` / `full-test.spec.ts` — invokes the in-console test runner; `full-test` produces the combined tester+s2s report at the end of `verify.sh` option 1.
+   - `create-tester-connections.spec.ts` — legacy UI fallback for tester connections (the API-based `api-connection-creator.ts` is now the primary path, used by `track-tester.sh`).
+   - `test-console.spec.ts` / `full-test.spec.ts` — invokes the in-console test runner; `full-test` produces the tester report at the end of `verify.sh` option 1.
 
 4. **Cluster shell scripts** (`verification/scripts/cluster/`) — `kubectl`-based checks against the target PDP cluster. The shell that invokes them must already be configured to reach the cluster. All scripts source `common.sh` for shared logging and `verify_cluster` connectivity check. Test manifests live under `verification/scripts/cluster/manifests/`.
 
@@ -54,6 +52,7 @@ Three layers:
 
 API-based (current main flow):
 - `api-component-creator.ts` — Creates components via the GraphQL `createBuildpackComponent` / `createByocComponent` mutations. Idempotent (skips existing).
+- `api-connection-creator.ts` — Creates service connections via REST + GraphQL APIs (marketplace lookup → `choreo-connections` POST). Idempotent (skips existing).
 - `api-build-poller.ts` — Polls build status until success/failure for one or more components in parallel.
 - `api-deployment-poller.ts` — Polls deployment status until ACTIVE.
 - `api-redeployer.ts` — Redeploys a component via the `deployDeploymentTrack` mutation.
@@ -66,7 +65,7 @@ API-based (current main flow):
 UI-based (only what still needs the UI):
 - `auth.ts` — Manual SSO login helper (used by `setup-auth.spec.ts`).
 - `google-relogin.ts` — Auto re-login on session expiry.
-- `connection-creator.ts` — Creates service connections (idempotent, skips existing).
+- `connection-creator.ts` — Legacy UI fallback for connection creation (no longer the primary path; superseded by `api-connection-creator.ts`).
 - `test-console-runner.ts` — Opens a component's test console, executes an endpoint, returns the response body.
 
 ## Architecture Notes
@@ -90,9 +89,9 @@ Defined in `verification/verification-steps.md`. Current automation status:
 | Metadata endpoint blocking | Yes | `scripts/cluster/metadata-endpoint-test.sh` |
 | Component creation | Yes | GraphQL via `npm run create:api` |
 | Build polling | Yes | GraphQL via `npm run poll:api` |
-| Connection creation | Yes | Playwright UI via `npm run create:connection` |
+| Connection creation | Yes | REST/GraphQL via `npm run create:connection:api` |
 | Component redeploy | Yes | GraphQL via `npm run redeploy` |
-| Endpoint invocation (tester / s2s) | Yes | Data plane via `npm run test:api` |
+| Endpoint invocation | Yes | Data plane via `npm run test:api` |
 | Webapp reachability | Yes | `npm run test:webapp` |
 | Logs + metrics observability | Yes | `npm run test:obs` |
 | Combined UI report | Yes | `npm run full-test` |
@@ -110,7 +109,7 @@ npm run login
 
 # --- Canonical entry point ---
 
-# Full verification — interactive menu (all / tester / s2s / infra)
+# Full verification — interactive menu (all / tester / infra)
 bash scripts/verify.sh
 
 # Reset persisted state and start fresh
@@ -120,11 +119,11 @@ bash scripts/verify.sh --reset
 
 bash scripts/track-infra.sh
 bash scripts/track-tester.sh
-bash scripts/track-s2s.sh
 
 # --- Individual API helpers (ad-hoc) ---
 
-npm run create:api -- tester           # or s2s, or no arg for all
+npm run create:api -- tester           # or no arg for all
+npm run create:connection:api -- tester
 npm run poll:api -- tester,org-service
 npm run poll:deployment -- tester
 npm run redeploy -- tester
@@ -133,8 +132,6 @@ npm run test:webapp
 npm run test:obs -- tester
 
 # --- UI-driven helpers ---
-
-npm run create:connection
 npm run create:tester-connections
 npm run test:console
 npm run full-test

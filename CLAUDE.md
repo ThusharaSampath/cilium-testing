@@ -32,7 +32,7 @@ Go services deployed as Choreo components via the connected GitHub repo (`GITHUB
 
 Three layers:
 
-1. **Bash orchestration** (`verification/scripts/`) — `verify.sh` is the canonical entry point with a 3-option menu (all / tester only / infra only). Each track is a numbered, state-tracked sequence of steps written to `.verification-state.json` for resumability.
+1. **Bash orchestration** (`verification/scripts/`) — `verify.sh` is the canonical entry point with a 3-option menu (all / tester only / infra only). Each track is a numbered, state-tracked sequence of steps written to `.verification-state.json` for resumability
    - `track-infra.sh` — kubectl-based cluster checks.
    - `track-tester.sh` — tester pipeline (create → poll builds → create connections → redeploy → poll deployment → test → webapp → observability). Also covers project-level service-to-service via the `tester → project-service` connection.
    - `prereq-check.sh` — validates `.env` and `resourceRef` lines in component.yamls match `CHOREO_PROJECT_HANDLER`.

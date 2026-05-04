@@ -1,0 +1,198 @@
+flowchart TB
+    %% ============ ENTRY POINT ============
+    subgraph ENTRY["🚀 ENTRY POINT"]
+        direction TB
+        VERIFY["bash scripts/verify.sh"]
+        MENU{{"Interactive Menu<br/>1: Infra + Tester + UI Report<br/>2: Tester only<br/>3: Infra only"}}
+        RESET["--reset flag<br/>(clears state & exits)"]
+        CLEANUP["Cleanup Prompt<br/>(end of run)"]
+        VERIFY --> MENU
+        VERIFY -.->|"--reset"| RESET
+        VERIFY --> CLEANUP
+    end
+
+    %% ============ SHARED ORCHESTRATION ============
+    subgraph ORCH["⚙️ SHARED ORCHESTRATION — verification/scripts/common.sh"]
+        direction TB
+        COMMON["common.sh<br/>init_state | check_step_done | mark_step_done<br/>clear_state | check_auth | prompt_cleanup | pw_run"]
+        RUNSTEP["run_step (hard-fail)"]
+        RUNSOFT["run_step_soft (collects FAILURES[])"]
+        COMMON --> RUNSTEP
+        COMMON --> RUNSOFT
+    end
+
+    %% ============ STATE & CONFIG (PERSISTENCE BACKBONE) ============
+    subgraph STATE["💾 STATE & CONFIG FILES (persistence backbone)"]
+        direction LR
+        STATEFILE[(".verification-state.json<br/>step_name → done")]
+        ENVFILE[(".env<br/>CHOREO_* / GITHUB_*")]
+        TOKENFILE[(".choreo-token.json<br/>STS cache")]
+        AUTHFILE[("auth/storage-state.json<br/>Playwright SSO session")]
+    end
+
+    %% ============ PREREQ CHECK ============
+    subgraph PREREQ["✅ PREREQ CHECK — prereq-check.sh"]
+        direction TB
+        PRECHECK["Validate .env vars<br/>Validate resourceRef in tester/.choreo/component.yaml"]
+        AUTOPATCH["Auto-patch (sed)<br/>→ waits for user to git push"]
+        PRECHECK -.->|mismatch| AUTOPATCH
+    end
+
+    %% ============ TRACK INFRA ============
+    subgraph INFRA["🛡️ TRACK INFRA — track-infra.sh (run_step_soft)"]
+        direction TB
+        INFRACOMMON["scripts/cluster/common.sh<br/>verify_cluster + load .env"]
+        CINFO["1. cluster-info.sh"]
+        CDNS["2. coredns-test.sh"]
+        ENC["3. transparent-encryption-test.sh"]
+        HUBBLE["4. hubble-observability-test.sh"]
+        META["5. metadata-endpoint-test.sh"]
+        NSISO["6. cross-namespace-isolation-test.sh"]
+        XNODE["7. cross-node-test.sh"]
+        GWMON["(opt) gateway-error-monitor.sh"]
+        MANIFESTS[("manifests/<br/>cross-namespace-isolation.yaml<br/>cross-node-request-drop.yaml")]
+        INFRACOMMON --> CINFO --> CDNS --> ENC --> HUBBLE --> META --> NSISO --> XNODE --> GWMON
+        NSISO -.applies.-> MANIFESTS
+        XNODE -.applies.-> MANIFESTS
+    end
+
+    %% ============ TRACK TESTER ============
+    subgraph TESTER["🧪 TRACK TESTER — track-tester.sh"]
+        direction TB
+        T1["Step 1: create:api:tester<br/>(run_step)"]
+        T2["Step 2: build poller<br/>(run_step)"]
+        T3["Step 3: connection creator<br/>(run_step)"]
+        T4["Step 4: redeployer<br/>(run_step)"]
+        T5["Step 5: deployment poller<br/>(run_step)"]
+        T6["Step 6: endpoint test<br/>(soft)"]
+        T7["Step 7: webapp test<br/>(soft)"]
+        T8["Step 8: observability test<br/>(soft)"]
+        TFINAL["Final (Opt 1): pw_run full-test<br/>→ combined UI report"]
+        T1 --> T2 --> T3 --> T4 --> T5 --> T6 --> T7 --> T8 --> TFINAL
+    end
+
+    %% ============ TYPESCRIPT API LAYER ============
+    subgraph TS["📘 TYPESCRIPT API LAYER (npx tsx) — verification/src/helpers/"]
+        direction TB
+        TOKENLOADER["token-loader.ts<br/>(cache + auto-refresh)"]
+        APICREATE["api-component-creator.ts<br/>org/public/project/webapp/tester"]
+        APIBUILD["api-build-poller.ts<br/>(parallel)"]
+        APICONN["api-connection-creator.ts<br/>tester → org/public/project"]
+        APIREDEPLOY["api-redeployer.ts"]
+        APIDEPLOY["api-deployment-poller.ts"]
+        APITEST["api-test-runner.ts<br/>(generates test API key)"]
+        APIWEB["api-webapp-tester.ts<br/>(resolve invokeUrl + curl)"]
+        APIOBS["api-observability-tester.ts<br/>(logs + metrics)"]
+        APICLEAN["api-component-cleanup.ts"]
+    end
+
+    %% ============ PLAYWRIGHT UI LAYER ============
+    subgraph PW["🎭 PLAYWRIGHT UI LAYER (headed)"]
+        direction TB
+        PWAUTH["setup-auth<br/>(one-time manual SSO)"]
+        PWCAP["capture-token<br/>(auto-invoked on cache miss)"]
+        PWFULL["full-test<br/>(final UI report)"]
+        PWLEGACY["create-tester-connections<br/>(legacy fallback)"]
+        PWRELOGIN["google-relogin.ts<br/>(session expiry recovery)"]
+    end
+
+    %% ============ EXTERNAL SYSTEMS ============
+    subgraph EXT["🌐 EXTERNAL SYSTEMS"]
+        direction TB
+        CHOREOGQL["Choreo Console<br/>GraphQL + REST<br/>(CHOREO_CONSOLE_URL)"]
+        STS["Choreo STS<br/>sts.choreo.dev/oauth2/token"]
+        DATAPLANE["Choreo Data Plane<br/>(endpoint invocation,<br/>logs+metrics)"]
+        GITHUB["GitHub Repo<br/>(GITHUB_REPO_NAME)<br/>component source"]
+        CLUSTER["Target PDP K8s Cluster<br/>Cilium · Hubble · WireGuard<br/>CoreDNS · Gateway Router"]
+    end
+
+    %% ============ CONTROL FLOW (solid) ============
+    MENU ==>|"Opt 1"| PREREQ
+    MENU ==>|"Opt 2"| PREREQ
+    MENU ==>|"Opt 1 / Opt 3"| INFRA
+    PREREQ ==> TESTER
+    TESTER ==>|"Opt 1"| TFINAL
+    CLEANUP ==> APICLEAN
+
+    %% ============ ORCHESTRATION HOOKS (solid) ============
+    INFRA -.uses.-> RUNSOFT
+    TESTER -.steps 1-5.-> RUNSTEP
+    TESTER -.steps 6-8.-> RUNSOFT
+
+    %% ============ STATE READ/WRITE (dashed) ============
+    RUNSTEP -. read/write .-> STATEFILE
+    RUNSOFT -. read/write .-> STATEFILE
+    RESET -. delete .-> STATEFILE
+    APICLEAN -. clear .-> STATEFILE
+    COMMON -. load .-> ENVFILE
+    INFRACOMMON -. load .-> ENVFILE
+    TS -. load .-> ENVFILE
+    TOKENLOADER -. read/write .-> TOKENFILE
+    PWCAP -. write .-> TOKENFILE
+    PWAUTH -. write .-> AUTHFILE
+    PW -. read .-> AUTHFILE
+
+    %% ============ TESTER STEP → TS HELPER (solid) ============
+    T1 --> APICREATE
+    T2 --> APIBUILD
+    T3 --> APICONN
+    T4 --> APIREDEPLOY
+    T5 --> APIDEPLOY
+    T6 --> APITEST
+    T7 --> APIWEB
+    T8 --> APIOBS
+
+    %% ============ TS → TOKEN LOADER ============
+    APICREATE -.token.-> TOKENLOADER
+    APIBUILD -.token.-> TOKENLOADER
+    APICONN -.token.-> TOKENLOADER
+    APIREDEPLOY -.token.-> TOKENLOADER
+    APIDEPLOY -.token.-> TOKENLOADER
+    APITEST -.token.-> TOKENLOADER
+    APIWEB -.token.-> TOKENLOADER
+    APIOBS -.token.-> TOKENLOADER
+    APICLEAN -.token.-> TOKENLOADER
+
+    %% ============ TOKEN LOADER → PLAYWRIGHT (cache miss) ============
+    TOKENLOADER -->|"cache miss<br/>spawn"| PWCAP
+    PWCAP ==>|"intercept<br/>oauth2/token"| STS
+
+    %% ============ EXTERNAL API CALLS (thick) ============
+    APICREATE ==>|"GraphQL<br/>createBuildpackComponent<br/>createByocComponent"| CHOREOGQL
+    APIBUILD ==>|"GraphQL build status"| CHOREOGQL
+    APICONN ==>|"REST marketplace +<br/>POST /choreo-connections"| CHOREOGQL
+    APIREDEPLOY ==>|"GraphQL<br/>deployDeploymentTrack"| CHOREOGQL
+    APIDEPLOY ==>|"GraphQL deployment status"| CHOREOGQL
+    APITEST ==>|"invoke /test"| DATAPLANE
+    APIWEB ==>|"GraphQL componentDeployment<br/>+ curl invokeUrl"| CHOREOGQL
+    APIWEB ==>|"curl webapp"| DATAPLANE
+    APIOBS ==>|"REST logs + metrics"| DATAPLANE
+    APICLEAN ==>|"GraphQL delete"| CHOREOGQL
+    PWFULL ==>|"UI report"| CHOREOGQL
+    PWLEGACY ==>|"UI fallback"| CHOREOGQL
+    CHOREOGQL ==>|"pulls source"| GITHUB
+
+    %% ============ INFRA → CLUSTER ============
+    INFRA ==>|"kubectl exec / apply<br/>(KUBECONFIG / oc login /<br/>SSH tunnel + HTTPS_PROXY)"| CLUSTER
+
+    %% ============ PREREQ → GITHUB ============
+    AUTOPATCH ==>|"user git push"| GITHUB
+
+    %% ============ PLAYWRIGHT EXPIRY ============
+    PW -.session expiry.-> PWRELOGIN
+    PWRELOGIN ==>|"re-login"| CHOREOGQL
+
+    %% ============ STYLING ============
+    classDef bash       fill:#FFE8B3,stroke:#C97B00,stroke-width:2px,color:#000
+    classDef ts         fill:#CDE7FF,stroke:#1F6FB2,stroke-width:2px,color:#000
+    classDef pw         fill:#E5D4FF,stroke:#6A2CB8,stroke-width:2px,color:#000
+    classDef ext        fill:#FFD0D0,stroke:#B8242C,stroke-width:2px,color:#000
+    classDef state      fill:#D6F5D6,stroke:#2E8B2E,stroke-width:2px,color:#000
+    classDef entry      fill:#FFF3A8,stroke:#A88A00,stroke-width:3px,color:#000
+
+    class VERIFY,MENU,RESET,CLEANUP entry
+    class COMMON,RUNSTEP,RUNSOFT,PRECHECK,AUTOPATCH,INFRACOMMON,CINFO,CDNS,ENC,HUBBLE,META,NSISO,XNODE,GWMON,T1,T2,T3,T4,T5,T6,T7,T8,TFINAL bash
+    class TOKENLOADER,APICREATE,APIBUILD,APICONN,APIREDEPLOY,APIDEPLOY,APITEST,APIWEB,APIOBS,APICLEAN ts
+    class PWAUTH,PWCAP,PWFULL,PWLEGACY,PWRELOGIN pw
+    class CHOREOGQL,STS,DATAPLANE,GITHUB,CLUSTER ext
+    class STATEFILE,ENVFILE,TOKENFILE,AUTHFILE,MANIFESTS state

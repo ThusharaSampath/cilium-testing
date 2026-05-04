@@ -58,7 +58,7 @@ Project-level S2S is exercised inside Track 2: `tester` calls `project-service` 
 
 ---
 
-## Not Yet Automated
+## Additional Tests
 
 - [ ] **HTTP retries**
   - Deploy a service that returns HTTP 500 deterministically.
@@ -75,9 +75,6 @@ Project-level S2S is exercised inside Track 2: `tester` calls `project-service` 
 ```bash
 # Full orchestrated run (infra → prereq → tester → full-test)
 bash scripts/verify.sh
-
-# Infra track only (no Choreo console needed)
-bash scripts/verify.sh   # choose option 4
 
 # Reset state and start over
 bash scripts/verify.sh --reset

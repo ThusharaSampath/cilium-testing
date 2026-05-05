@@ -67,6 +67,7 @@ data:
   enable-source-ip-verification: "true"
   enable-svc-source-range-check: "true"
   enable-tcx: "true"
+  enable-wireguard: "true"
   enable-vtep: "false"
   enable-well-known-identities: "false"
   enable-xt-socket-fallback: "true"
@@ -79,6 +80,8 @@ data:
   http-stream-idle-timeout: "300"
   hubble-disable-tls: "false"
   hubble-listen-address: :4244
+  hubble-metrics: httpV2:destinationContext=pod;sourceContext=pod;http_requests_total=status;http_request_duration_seconds=status
+  hubble-metrics-server: :9965
   hubble-network-policy-correlation-enabled: "true"
   hubble-socket-path: /var/run/cilium/hubble.sock
   hubble-tls-cert-file: /var/lib/cilium/tls/hubble/server.crt
